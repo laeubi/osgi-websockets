@@ -1,4 +1,4 @@
-package org.osgi.impl.websockets;
+package org.osgi.impl.websockets.server;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.jakarta.websocket.whiteboard.propertytypes.WhiteboardEndpoint;

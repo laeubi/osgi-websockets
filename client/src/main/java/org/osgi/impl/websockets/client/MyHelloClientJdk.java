@@ -1,4 +1,4 @@
-package org.osgi.impl.websockets;
+package org.osgi.impl.websockets.client;
 
 import java.io.IOException;
 import java.net.URI;
@@ -8,6 +8,7 @@ import java.net.http.WebSocket.Listener;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import org.osgi.impl.websockets.HelloService;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;

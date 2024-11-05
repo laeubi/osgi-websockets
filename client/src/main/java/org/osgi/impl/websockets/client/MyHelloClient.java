@@ -1,9 +1,10 @@
-package org.osgi.impl.websockets;
+package org.osgi.impl.websockets.client;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.osgi.impl.websockets.HelloService;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
