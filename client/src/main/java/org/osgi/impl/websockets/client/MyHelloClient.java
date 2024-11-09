@@ -8,6 +8,7 @@ import org.osgi.impl.websockets.HelloService;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 
 import jakarta.websocket.CloseReason;
 import jakarta.websocket.CloseReason.CloseCodes;
@@ -23,7 +24,8 @@ public class MyHelloClient implements HelloService {
 	private Session session;
 
 	@Activate
-	public MyHelloClient(WebSocketContainer container) throws DeploymentException, IOException, URISyntaxException {
+	public MyHelloClient(@Reference WebSocketContainer container)
+			throws DeploymentException, IOException, URISyntaxException {
 		session = container.connectToServer(this, new URI("ws://localhost:3000/hello"));
 	}
 
