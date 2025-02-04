@@ -7,8 +7,10 @@ import java.util.Set;
 import org.glassfish.tyrus.client.ClientManager;
 import org.glassfish.tyrus.container.grizzly.client.GrizzlyClientContainer;
 import org.glassfish.tyrus.container.grizzly.client.GrizzlyContainerProvider;
+import org.osgi.annotation.bundle.Capability;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.osgi.namespace.implementation.ImplementationNamespace;
 import org.osgi.service.component.AnyService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -25,6 +27,9 @@ import jakarta.websocket.Session;
 import jakarta.websocket.WebSocketContainer;
 
 @Component(service = { JakartaWebsocketServiceRuntime.class, WebSocketContainer.class }, immediate = true)
+@Capability(namespace = ImplementationNamespace.IMPLEMENTATION_NAMESPACE, //
+		name = JakartaWebsocketWhiteboardConstants.WEBSOCKET, //
+		version = JakartaWebsocketWhiteboardConstants.JAKARTA_WEBSOCKET_WHITEBOARD_SPECIFICATION_VERSION)
 public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServiceRuntime, WebSocketContainer {
 
 	private BundleContext context;
@@ -47,6 +52,10 @@ public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServ
 			+ "=true)", cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
 	public void addImplementor(ServiceReference<?> implementor) {
 		System.out.println("Got implementor " + implementor);
+	}
+
+	public void removeImplementor(ServiceReference<?> implementor) {
+
 	}
 
 	@Override
