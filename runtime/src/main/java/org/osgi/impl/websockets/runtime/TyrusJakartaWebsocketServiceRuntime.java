@@ -12,6 +12,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.namespace.implementation.ImplementationNamespace;
 import org.osgi.service.component.AnyService;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
@@ -35,15 +36,21 @@ public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServ
 	private BundleContext context;
 	private WebSocketContainer websocketContainerDelegate;
 
+	@Activate
 	public TyrusJakartaWebsocketServiceRuntime(BundleContext context) {
+		System.out.println("TyrusJakartaWebsocketServiceRuntime<init>()");
 		this.context = context;
-		Thread thread = Thread.currentThread();
-		ClassLoader oldccl = thread.getContextClassLoader();
 		try {
-			thread.setContextClassLoader(GrizzlyContainerProvider.class.getClassLoader());
-			this.websocketContainerDelegate = ClientManager.createClient(GrizzlyClientContainer.class.getName());
-		} finally {
-			thread.setContextClassLoader(oldccl);
+			Thread thread = Thread.currentThread();
+			ClassLoader oldccl = thread.getContextClassLoader();
+			try {
+				thread.setContextClassLoader(GrizzlyContainerProvider.class.getClassLoader());
+				this.websocketContainerDelegate = ClientManager.createClient(GrizzlyClientContainer.class.getName());
+			} finally {
+				thread.setContextClassLoader(oldccl);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
