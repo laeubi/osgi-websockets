@@ -10,6 +10,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 
+import jakarta.websocket.ClientEndpoint;
 import jakarta.websocket.CloseReason;
 import jakarta.websocket.CloseReason.CloseCodes;
 import jakarta.websocket.DeploymentException;
@@ -18,6 +19,7 @@ import jakarta.websocket.Session;
 import jakarta.websocket.WebSocketContainer;
 
 @Component(service = HelloService.class)
+@ClientEndpoint
 public class MyHelloClient implements HelloService {
 
 

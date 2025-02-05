@@ -7,7 +7,12 @@ import java.util.Set;
 import org.glassfish.tyrus.client.ClientManager;
 import org.glassfish.tyrus.container.grizzly.client.GrizzlyClientContainer;
 import org.glassfish.tyrus.container.grizzly.client.GrizzlyContainerProvider;
+import org.glassfish.tyrus.core.DefaultComponentProvider;
+import org.glassfish.tyrus.core.TyrusServerEndpointConfigurator;
+import org.glassfish.tyrus.spi.ServerContainer;
+import org.glassfish.tyrus.spi.ServerContainerFactory;
 import org.osgi.annotation.bundle.Capability;
+import org.osgi.annotation.bundle.Referenced;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.namespace.implementation.ImplementationNamespace;
@@ -26,11 +31,13 @@ import jakarta.websocket.Endpoint;
 import jakarta.websocket.Extension;
 import jakarta.websocket.Session;
 import jakarta.websocket.WebSocketContainer;
+import jakarta.websocket.server.ServerEndpoint;
 
 @Component(service = { JakartaWebsocketServiceRuntime.class, WebSocketContainer.class }, immediate = true)
 @Capability(namespace = ImplementationNamespace.IMPLEMENTATION_NAMESPACE, //
 		name = JakartaWebsocketWhiteboardConstants.WEBSOCKET, //
 		version = JakartaWebsocketWhiteboardConstants.JAKARTA_WEBSOCKET_WHITEBOARD_SPECIFICATION_VERSION)
+@Referenced({ TyrusServerEndpointConfigurator.class, DefaultComponentProvider.class, GrizzlyContainerProvider.class })
 public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServiceRuntime, WebSocketContainer {
 
 	private BundleContext context;
@@ -44,7 +51,7 @@ public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServ
 			Thread thread = Thread.currentThread();
 			ClassLoader oldccl = thread.getContextClassLoader();
 			try {
-				thread.setContextClassLoader(GrizzlyContainerProvider.class.getClassLoader());
+				thread.setContextClassLoader(TyrusJakartaWebsocketServiceRuntime.class.getClassLoader());
 				this.websocketContainerDelegate = ClientManager.createClient(GrizzlyClientContainer.class.getName());
 			} finally {
 				thread.setContextClassLoader(oldccl);
@@ -58,7 +65,39 @@ public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServ
 			+ JakartaWebsocketWhiteboardConstants.WEBSOCKET_ENDPOINT_IMPLEMENTOR
 			+ "=true)", cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
 	public void addImplementor(ServiceReference<?> implementor) {
+		System.out.println("######################################");
+		System.out.println();
 		System.out.println("Got implementor " + implementor);
+		Object service = context.getService(implementor);
+		createServer(service);
+		System.out.println("Implementor service: " + service);
+		System.out.println();
+		System.out.println("######################################");
+	}
+
+	private void createServer(Object service) {
+		try {
+			Thread thread = Thread.currentThread();
+			ClassLoader oldccl = thread.getContextClassLoader();
+			try {
+				Class<?> serviceClass = service.getClass();
+				final ServerEndpoint wseAnnotation = serviceClass.getAnnotation(ServerEndpoint.class);
+				if (wseAnnotation == null) {
+					throw new DeploymentException(
+							"Service must be an jakarta.websocket.server.ServerEndpoint annotated class!");
+				}
+				thread.setContextClassLoader(TyrusJakartaWebsocketServiceRuntime.class.getClassLoader());
+				System.out.println("start");
+				ServerContainer serverContainer = ServerContainerFactory.createServerContainer();
+				serverContainer.addEndpoint(service.getClass());
+				serverContainer.start("/", 3000);
+			} finally {
+				thread.setContextClassLoader(oldccl);
+			}
+		} catch (Exception e) {
+			e.printStackTrace(System.out);
+		}
+
 	}
 
 	public void removeImplementor(ServiceReference<?> implementor) {
@@ -77,7 +116,7 @@ public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServ
 
 	@Override
 	public Session connectToServer(Object annotatedEndpointInstance, URI path) throws DeploymentException, IOException {
-		return websocketContainerDelegate.connectToServer(getClass(), path);
+		return websocketContainerDelegate.connectToServer(annotatedEndpointInstance, path);
 	}
 
 	@Override
