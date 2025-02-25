@@ -7,43 +7,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.glassfish.tyrus.client.ClientManager;
-import org.glassfish.tyrus.container.grizzly.client.GrizzlyClientContainer;
 import org.glassfish.tyrus.core.frame.TyrusFrame.FrameType;
 import org.glassfish.tyrus.core.monitoring.ApplicationEventListener;
 import org.glassfish.tyrus.core.monitoring.EndpointEventListener;
 import org.glassfish.tyrus.core.monitoring.MessageEventListener;
 import org.glassfish.tyrus.spi.ServerContainer;
 import org.glassfish.tyrus.spi.ServerContainerFactory;
+import org.osgi.service.component.annotations.Component;
 
 import jakarta.websocket.DeploymentException;
-import jakarta.websocket.WebSocketContainer;
 import jakarta.websocket.server.ServerEndpoint;
 
-class TyrusWebsocketServer {
+@Component(service = TyrusWebsocketServer.class)
+public class TyrusWebsocketServer {
 
 	private static final int PORT = 3000;
 	private static final String ROOT_PATH = "/";
-	private WebSocketContainer websocketContainerDelegate;
 	private List<Object> endpoints = new ArrayList<>();
 	private Set<Class<?>> endpointClasses = new LinkedHashSet<>();
 	private ServerContainer serverContainer;
 
-	synchronized WebSocketContainer getWebSocketContainer() {
-		if (websocketContainerDelegate == null) {
-			Thread thread = Thread.currentThread();
-			ClassLoader oldccl = thread.getContextClassLoader();
-			try {
-				thread.setContextClassLoader(TyrusWebsocketServer.class.getClassLoader());
-				websocketContainerDelegate = ClientManager.createClient(GrizzlyClientContainer.class.getName());
-			} finally {
-				thread.setContextClassLoader(oldccl);
-			}
-		}
-		return websocketContainerDelegate;
-	}
-
-	public synchronized void addEndpoint(Object service) throws DeploymentException, IOException {
+	synchronized void addEndpoint(Object service) throws DeploymentException, IOException {
 		LinkedHashSet<Class<?>> next = new LinkedHashSet<>(endpointClasses);
 		// First check if we have not deployed this endpoint already
 		if (next.add(service.getClass())) {
@@ -62,7 +46,7 @@ class TyrusWebsocketServer {
 		}
 	}
 
-	public synchronized void removeEndpoint(Object service) {
+	synchronized void removeEndpoint(Object service) {
 		if (endpoints.remove(service) && endpointClasses.remove(service.getClass())) {
 			try {
 				deployCurrent();
