@@ -13,9 +13,12 @@ import org.glassfish.tyrus.spi.ServerContainerFactory;
 
 import jakarta.websocket.DeploymentException;
 import jakarta.websocket.WebSocketContainer;
+import jakarta.websocket.server.ServerEndpoint;
 
 class TyrusWebsocketServer {
 
+	private static final int PORT = 3000;
+	private static final String ROOT_PATH = "/";
 	private WebSocketContainer websocketContainerDelegate;
 	private List<Object> endpoints = new ArrayList<>();
 	private Set<Class<?>> endpointClasses = new LinkedHashSet<>();
@@ -88,7 +91,7 @@ class TyrusWebsocketServer {
 			}
 			System.out.println("Start server...");
 			try {
-				serverContainer.start("/", 3000);
+				serverContainer.start(ROOT_PATH, PORT);
 			} catch (DeploymentException e) {
 				System.out.println("Deployment failed: " + e);
 				throw e;
@@ -112,6 +115,10 @@ class TyrusWebsocketServer {
 			System.out.println("Server stopped!");
 			serverContainer = null;
 		}
+	}
+
+	public synchronized String getAddress(ServerEndpoint serverEndpointAnnotation) {
+		return "ws://localhost:" + PORT + ROOT_PATH + serverEndpointAnnotation.value();
 	}
 
 }
