@@ -4,10 +4,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.glassfish.tyrus.client.ClientManager;
 import org.glassfish.tyrus.container.grizzly.client.GrizzlyClientContainer;
+import org.glassfish.tyrus.core.frame.TyrusFrame.FrameType;
+import org.glassfish.tyrus.core.monitoring.ApplicationEventListener;
+import org.glassfish.tyrus.core.monitoring.EndpointEventListener;
+import org.glassfish.tyrus.core.monitoring.MessageEventListener;
 import org.glassfish.tyrus.spi.ServerContainer;
 import org.glassfish.tyrus.spi.ServerContainerFactory;
 
@@ -85,11 +90,61 @@ class TyrusWebsocketServer {
 		ClassLoader oldccl = thread.getContextClassLoader();
 		try {
 			thread.setContextClassLoader(TyrusWebsocketServer.class.getClassLoader());
-			ServerContainer serverContainer = ServerContainerFactory.createServerContainer();
+			serverContainer = ServerContainerFactory.createServerContainer(
+					Map.of(ApplicationEventListener.APPLICATION_EVENT_LISTENER, new ApplicationEventListener() {
+
+						@Override
+						public void onEndpointUnregistered(String endpointPath) {
+							System.out.println("Endpoint unregistered: " + endpointPath);
+						}
+
+						@Override
+						public EndpointEventListener onEndpointRegistered(String endpointPath, Class<?> endpointClass) {
+							System.out.println("Endpoint registered: " + endpointPath + " (" + endpointClass + ")");
+							return new EndpointEventListener() {
+
+								@Override
+								public MessageEventListener onSessionOpened(String sessionId) {
+									System.out.println("Session opened: " + sessionId);
+									return new MessageEventListener() {
+
+										@Override
+										public void onFrameSent(FrameType frameType, long payloadLength) {
+											System.out.println("Frame send: " + frameType);
+										}
+
+										@Override
+										public void onFrameReceived(FrameType frameType, long payloadLength) {
+											System.out.println("Frame received: " + frameType);
+										}
+									};
+								}
+
+								@Override
+								public void onSessionClosed(String sessionId) {
+									System.out.println("Session closed: " + sessionId);
+								}
+
+								@Override
+								public void onError(String sessionId, Throwable t) {
+									System.out.println("Error: " + sessionId + " -> " + t);
+								}
+							};
+						}
+
+						@Override
+						public void onApplicationInitialized(String applicationName) {
+							System.out.println("Initialized Application");
+						}
+
+						@Override
+						public void onApplicationDestroyed() {
+							System.out.println("Destroyed Application");
+						}
+					}));
 			for (Class<?> endpoint : endpoints) {
 				serverContainer.addEndpoint(endpoint);
 			}
-			System.out.println("Start server...");
 			try {
 				serverContainer.start(ROOT_PATH, PORT);
 			} catch (DeploymentException e) {
@@ -118,7 +173,7 @@ class TyrusWebsocketServer {
 	}
 
 	public synchronized String getAddress(ServerEndpoint serverEndpointAnnotation) {
-		return "ws://localhost:" + PORT + ROOT_PATH + serverEndpointAnnotation.value();
+		return "ws://localhost:" + PORT + (ROOT_PATH + serverEndpointAnnotation.value()).replaceAll("//+", "/");
 	}
 
 }

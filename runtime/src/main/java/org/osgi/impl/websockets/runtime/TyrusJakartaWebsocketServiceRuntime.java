@@ -60,7 +60,6 @@ public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServ
 
 	@Activate
 	public TyrusJakartaWebsocketServiceRuntime(ComponentContext context) {
-		System.out.println("TyrusJakartaWebsocketServiceRuntime<init>()");
 		this.context = context;
 		// WORKAROUND for https://github.com/osgi/osgi/issues/809
 		registration = context.getBundleContext().registerService(JakartaWebsocketServiceRuntime.class, this,
@@ -83,8 +82,6 @@ public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServ
 			+ JakartaWebsocketWhiteboardConstants.WEBSOCKET_ENDPOINT_IMPLEMENTOR
 			+ "=true)", cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
 	public void addImplementor(ServiceReference<?> implementor) {
-		System.out.println("######################################");
-		System.out.println("Got implementor " + implementor);
 		ImplementorContainer container = new ImplementorContainer(implementor, context.getBundleContext(), server);
 		implementors.put(implementor, container);
 		container.register();
@@ -92,8 +89,6 @@ public class TyrusJakartaWebsocketServiceRuntime implements JakartaWebsocketServ
 	}
 
 	public void removeImplementor(ServiceReference<?> implementor) {
-		System.out.println("######################################");
-		System.out.println("Remove implementor " + implementor);
 		ImplementorContainer container = implementors.remove(implementor);
 		if (container != null) {
 			container.dispose();
