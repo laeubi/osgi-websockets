@@ -13,6 +13,7 @@ import org.glassfish.tyrus.core.monitoring.EndpointEventListener;
 import org.glassfish.tyrus.core.monitoring.MessageEventListener;
 import org.glassfish.tyrus.spi.ServerContainer;
 import org.glassfish.tyrus.spi.ServerContainerFactory;
+import org.glassfish.tyrus.spi.WebSocketEngine;
 import org.osgi.service.component.annotations.Component;
 
 import jakarta.websocket.DeploymentException;
@@ -126,6 +127,7 @@ public class TyrusWebsocketServer {
 							System.out.println("Destroyed Application");
 						}
 					}));
+			System.out.println("Server Container is " + serverContainer.getClass());
 			for (Class<?> endpoint : endpoints) {
 				serverContainer.addEndpoint(endpoint);
 			}
@@ -142,6 +144,9 @@ public class TyrusWebsocketServer {
 				throw e;
 			}
 			System.out.println("Server started!");
+			// TyrusServletContainerInitializer servletContainerInitializer = new
+			// TyrusServletContainerInitializer();
+			// https://docs.osgi.org/specification/osgi.cmpn/8.1.0/service.servlet.html#d0e87922
 		} finally {
 			thread.setContextClassLoader(oldccl);
 		}
@@ -158,6 +163,13 @@ public class TyrusWebsocketServer {
 
 	public synchronized String getAddress(ServerEndpoint serverEndpointAnnotation) {
 		return "ws://localhost:" + PORT + (ROOT_PATH + serverEndpointAnnotation.value()).replaceAll("//+", "/");
+	}
+
+	public synchronized WebSocketEngine getEngine() {
+		if (serverContainer == null) {
+			return null;
+		}
+		return serverContainer.getWebSocketEngine();
 	}
 
 }

@@ -25,5 +25,6 @@
 
 -runtrace: true
 -runproperties:  \
-	tester.trace=true
+	tester.trace=true, \
+	sun.net.http.allowRestrictedHeaders=true
 	
