@@ -59,8 +59,15 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             
             if (registration != null) {
                 try {
-                    // Create endpoint instance using the configurator
-                    Object endpointInstance = registration.configurator.getEndpointInstance(registration.endpointClass);
+                    // Create endpoint instance using the handler or configurator
+                    Object endpointInstance;
+                    if (registration.handler != null) {
+                        // Use the new EndpointHandler API
+                        endpointInstance = registration.handler.createEndpointInstance(registration.endpointClass);
+                    } else {
+                        // Fall back to the old Configurator API (for backward compatibility)
+                        endpointInstance = registration.configurator.getEndpointInstance(registration.endpointClass);
+                    }
                     ctx.channel().attr(ENDPOINT_INSTANCE_KEY).set(endpointInstance);
                     
                     // Register this channel with the endpoint
@@ -123,6 +130,18 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             Session session = ctx.channel().attr(SESSION_KEY).get();
             // Invoke @OnClose if present
             invokeOnClose(endpointInstance, session);
+            
+            // Notify the handler that the session has ended (if using new API)
+            JakartaWebSocketServer.EndpointRegistration registration = 
+                ctx.channel().attr(WebSocketPathHandler.ENDPOINT_REGISTRATION_KEY).get();
+            if (registration != null && registration.handler != null) {
+                try {
+                    registration.handler.sessionEnded(endpointInstance);
+                } catch (Exception e) {
+                    System.err.println("Error in EndpointHandler.sessionEnded: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
         }
         
         // Unregister the channel from the endpoint registration
