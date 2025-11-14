@@ -186,6 +186,7 @@ public class JakartaWebSocketServer {
     /**
      * Creates and registers a WebSocket endpoint with the server.
      * 
+     * @param <T> The type of the endpoint class
      * @param endpointClass The endpoint class annotated with @ServerEndpoint
      * @param path The path to register the endpoint at, or null to use the annotation's value
      * @param handler The handler for creating endpoint instances and managing lifecycle (must not be null)
