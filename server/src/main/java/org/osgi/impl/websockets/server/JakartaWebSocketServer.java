@@ -45,11 +45,38 @@ public class JakartaWebSocketServer {
         final Class<?> endpointClass;
         final String effectivePath;
         final ServerEndpointConfig.Configurator configurator;
+        private final Map<io.netty.channel.Channel, Object> activeChannels = new ConcurrentHashMap<>();
         
         EndpointRegistration(Class<?> endpointClass, String effectivePath, ServerEndpointConfig.Configurator configurator) {
             this.endpointClass = endpointClass;
             this.effectivePath = effectivePath;
             this.configurator = configurator;
+        }
+        
+        /**
+         * Registers an active channel for this endpoint.
+         */
+        void registerChannel(io.netty.channel.Channel channel, Object endpointInstance) {
+            activeChannels.put(channel, endpointInstance);
+        }
+        
+        /**
+         * Unregisters a channel from this endpoint.
+         */
+        void unregisterChannel(io.netty.channel.Channel channel) {
+            activeChannels.remove(channel);
+        }
+        
+        /**
+         * Closes all active channels for this endpoint.
+         */
+        void closeAllChannels() {
+            for (io.netty.channel.Channel channel : activeChannels.keySet()) {
+                if (channel.isActive()) {
+                    channel.close();
+                }
+            }
+            activeChannels.clear();
         }
     }
     
@@ -268,11 +295,11 @@ public class JakartaWebSocketServer {
             return false;
         }
         
+        // Close all active sessions for this endpoint before removing it
+        registration.closeAllChannels();
+        
         // Remove the endpoint
         endpoints.remove(effectivePath);
-        
-        // TODO: Close all active sessions for this endpoint
-        // This will be implemented when we integrate session management
         
         System.out.println("Removed endpoint " + endpoint.getName() + " from path " + effectivePath);
         return true;

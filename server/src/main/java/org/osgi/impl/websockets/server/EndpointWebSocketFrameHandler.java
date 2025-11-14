@@ -49,6 +49,9 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                     Object endpointInstance = registration.configurator.getEndpointInstance(registration.endpointClass);
                     ctx.channel().attr(ENDPOINT_INSTANCE_KEY).set(endpointInstance);
                     
+                    // Register this channel with the endpoint
+                    registration.registerChannel(ctx.channel(), endpointInstance);
+                    
                     // Invoke @OnOpen if present
                     invokeOnOpen(endpointInstance);
                 } catch (Exception e) {
@@ -101,6 +104,13 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
         if (endpointInstance != null) {
             // Invoke @OnClose if present
             invokeOnClose(endpointInstance);
+        }
+        
+        // Unregister the channel from the endpoint registration
+        JakartaWebSocketServer.EndpointRegistration registration = 
+            ctx.channel().attr(WebSocketPathHandler.ENDPOINT_REGISTRATION_KEY).get();
+        if (registration != null) {
+            registration.unregisterChannel(ctx.channel());
         }
         
         super.channelInactive(ctx);
