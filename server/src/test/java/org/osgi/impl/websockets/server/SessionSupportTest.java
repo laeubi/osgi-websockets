@@ -24,10 +24,10 @@ public class SessionSupportTest {
     private static final String HOSTNAME = "localhost";
     private static final int PORT = 8891;
     
-    private EndpointHandler createSimpleHandler() {
-        return new EndpointHandler() {
+    private EndpointHandler<SessionEndpoint> createSimpleHandler() {
+        return new EndpointHandler<SessionEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public SessionEndpoint createEndpointInstance(Class<SessionEndpoint> endpointClass) throws InstantiationException {
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
@@ -36,7 +36,7 @@ public class SessionSupportTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(SessionEndpoint endpointInstance) {
                 // No-op for this test
             }
         };

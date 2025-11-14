@@ -43,12 +43,12 @@ public class EndpointHandlerLifecycleTest {
     public void testEndpointHandlerLifecycle() throws Exception {
         // Track lifecycle events
         AtomicInteger instancesCreated = new AtomicInteger(0);
-        List<Object> sessionEndedInstances = new ArrayList<>();
+        List<TestEndpoint> sessionEndedInstances = new ArrayList<>();
         CountDownLatch sessionEndedLatch = new CountDownLatch(1);
         
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 instancesCreated.incrementAndGet();
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
@@ -58,14 +58,14 @@ public class EndpointHandlerLifecycleTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
                 sessionEndedInstances.add(endpointInstance);
                 sessionEndedLatch.countDown();
             }
         };
         
         // Register the endpoint
-        WebSocketEndpoint endpoint = server.createEndpoint(TestEndpoint.class, null, handler);
+        WebSocketEndpoint<TestEndpoint> endpoint = server.createEndpoint(TestEndpoint.class, null, handler);
         assertNotNull(endpoint);
         assertEquals("/test", endpoint.getPath());
         
@@ -116,9 +116,9 @@ public class EndpointHandlerLifecycleTest {
         AtomicInteger instancesCreated = new AtomicInteger(0);
         AtomicInteger sessionsEnded = new AtomicInteger(0);
         
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 instancesCreated.incrementAndGet();
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
@@ -128,13 +128,13 @@ public class EndpointHandlerLifecycleTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
                 sessionsEnded.incrementAndGet();
             }
         };
         
         // Register the endpoint
-        WebSocketEndpoint endpoint = server.createEndpoint(TestEndpoint.class, null, handler);
+        WebSocketEndpoint<TestEndpoint> endpoint = server.createEndpoint(TestEndpoint.class, null, handler);
         
         // Connect multiple clients
         HttpClient client = HttpClient.newHttpClient();
@@ -178,9 +178,9 @@ public class EndpointHandlerLifecycleTest {
         // Track sessions
         AtomicInteger sessionsEnded = new AtomicInteger(0);
         
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
@@ -189,13 +189,13 @@ public class EndpointHandlerLifecycleTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
                 sessionsEnded.incrementAndGet();
             }
         };
         
         // Register the endpoint
-        WebSocketEndpoint endpoint = server.createEndpoint(TestEndpoint.class, null, handler);
+        WebSocketEndpoint<TestEndpoint> endpoint = server.createEndpoint(TestEndpoint.class, null, handler);
         
         // Connect a client
         CountDownLatch closeLatch = new CountDownLatch(1);
