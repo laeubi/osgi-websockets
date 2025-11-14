@@ -27,9 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     
     private static final AttributeKey<Object> ENDPOINT_INSTANCE_KEY = AttributeKey.valueOf("endpoint_instance");
+    private static final AttributeKey<Session> SESSION_KEY = AttributeKey.valueOf("websocket_session");
     
     private final JakartaWebSocketServer server;
-    private final Map<ChannelHandlerContext, Session> sessions = new ConcurrentHashMap<>();
     
     public EndpointWebSocketFrameHandler(JakartaWebSocketServer server) {
         this.server = server;
@@ -39,6 +39,20 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         // This is called after the WebSocket handshake completes
         if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+            WebSocketServerProtocolHandler.HandshakeComplete handshake = 
+                (WebSocketServerProtocolHandler.HandshakeComplete) evt;
+            
+            // Create a Session for this connection
+            java.net.URI requestUri;
+            try {
+                requestUri = new java.net.URI(handshake.requestUri());
+            } catch (java.net.URISyntaxException e) {
+                // Fallback to a simple URI if parsing fails
+                requestUri = java.net.URI.create("ws://localhost" + handshake.requestUri());
+            }
+            Session session = new NettyWebSocketSession(ctx.channel(), requestUri);
+            ctx.channel().attr(SESSION_KEY).set(session);
+            
             // Now get the endpoint registration that was set by WebSocketPathHandler
             JakartaWebSocketServer.EndpointRegistration registration = 
                 ctx.channel().attr(WebSocketPathHandler.ENDPOINT_REGISTRATION_KEY).get();
@@ -53,7 +67,7 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                     registration.registerChannel(ctx.channel(), endpointInstance);
                     
                     // Invoke @OnOpen if present
-                    invokeOnOpen(endpointInstance);
+                    invokeOnOpen(endpointInstance, session);
                 } catch (Exception e) {
                     System.err.println("Failed to create endpoint instance: " + e.getMessage());
                     e.printStackTrace();
@@ -78,8 +92,11 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                 return;
             }
             
+            // Get the session for this channel
+            Session session = ctx.channel().attr(SESSION_KEY).get();
+            
             // Find and invoke @OnMessage method
-            String response = invokeOnMessage(endpointInstance, receivedText);
+            String response = invokeOnMessage(endpointInstance, receivedText, session);
             if (response != null) {
                 ctx.channel().writeAndFlush(new TextWebSocketFrame(response));
             }
@@ -102,8 +119,10 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
         // Get the endpoint instance
         Object endpointInstance = ctx.channel().attr(ENDPOINT_INSTANCE_KEY).get();
         if (endpointInstance != null) {
+            // Get the session for this channel
+            Session session = ctx.channel().attr(SESSION_KEY).get();
             // Invoke @OnClose if present
-            invokeOnClose(endpointInstance);
+            invokeOnClose(endpointInstance, session);
         }
         
         // Unregister the channel from the endpoint registration
@@ -123,8 +142,10 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
         // Get the endpoint instance
         Object endpointInstance = ctx.channel().attr(ENDPOINT_INSTANCE_KEY).get();
         if (endpointInstance != null) {
+            // Get the session for this channel
+            Session session = ctx.channel().attr(SESSION_KEY).get();
             // Invoke @OnError if present
-            invokeOnError(endpointInstance, cause);
+            invokeOnError(endpointInstance, cause, session);
         }
         
         ctx.close();
@@ -133,13 +154,32 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
     /**
      * Invokes the @OnMessage method on the endpoint instance.
      */
-    private String invokeOnMessage(Object endpointInstance, String message) {
+    private String invokeOnMessage(Object endpointInstance, String message, Session session) {
         Method[] methods = endpointInstance.getClass().getDeclaredMethods();
         for (Method method : methods) {
             if (method.isAnnotationPresent(OnMessage.class)) {
                 try {
                     method.setAccessible(true);
-                    Object result = method.invoke(endpointInstance, message);
+                    Object result;
+                    Class<?>[] paramTypes = method.getParameterTypes();
+                    
+                    // Try different parameter combinations
+                    if (paramTypes.length == 1 && paramTypes[0] == String.class) {
+                        // Method signature: String onMessage(String message)
+                        result = method.invoke(endpointInstance, message);
+                    } else if (paramTypes.length == 2 && paramTypes[0] == String.class && 
+                               paramTypes[1] == Session.class) {
+                        // Method signature: String onMessage(String message, Session session)
+                        result = method.invoke(endpointInstance, message, session);
+                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
+                               paramTypes[1] == String.class) {
+                        // Method signature: String onMessage(Session session, String message)
+                        result = method.invoke(endpointInstance, session, message);
+                    } else {
+                        // Skip methods with unsupported signatures
+                        continue;
+                    }
+                    
                     return result != null ? result.toString() : null;
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnMessage: " + e.getMessage());
@@ -153,16 +193,24 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
     /**
      * Invokes the @OnOpen method on the endpoint instance.
      */
-    private void invokeOnOpen(Object endpointInstance) {
+    private void invokeOnOpen(Object endpointInstance, Session session) {
         Method[] methods = endpointInstance.getClass().getDeclaredMethods();
         for (Method method : methods) {
             if (method.isAnnotationPresent(OnOpen.class)) {
                 try {
                     method.setAccessible(true);
-                    // For now, invoke without Session parameter
-                    // In a full implementation, we'd create a proper Session object
-                    if (method.getParameterCount() == 0) {
+                    Class<?>[] paramTypes = method.getParameterTypes();
+                    
+                    // Try different parameter combinations
+                    if (paramTypes.length == 0) {
+                        // Method signature: void onOpen()
                         method.invoke(endpointInstance);
+                    } else if (paramTypes.length == 1 && paramTypes[0] == Session.class) {
+                        // Method signature: void onOpen(Session session)
+                        method.invoke(endpointInstance, session);
+                    } else {
+                        // Skip methods with unsupported signatures
+                        continue;
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnOpen: " + e.getMessage());
@@ -175,15 +223,24 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
     /**
      * Invokes the @OnClose method on the endpoint instance.
      */
-    private void invokeOnClose(Object endpointInstance) {
+    private void invokeOnClose(Object endpointInstance, Session session) {
         Method[] methods = endpointInstance.getClass().getDeclaredMethods();
         for (Method method : methods) {
             if (method.isAnnotationPresent(OnClose.class)) {
                 try {
                     method.setAccessible(true);
-                    // For now, invoke without parameters
-                    if (method.getParameterCount() == 0) {
+                    Class<?>[] paramTypes = method.getParameterTypes();
+                    
+                    // Try different parameter combinations
+                    if (paramTypes.length == 0) {
+                        // Method signature: void onClose()
                         method.invoke(endpointInstance);
+                    } else if (paramTypes.length == 1 && paramTypes[0] == Session.class) {
+                        // Method signature: void onClose(Session session)
+                        method.invoke(endpointInstance, session);
+                    } else {
+                        // Skip methods with unsupported signatures
+                        continue;
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnClose: " + e.getMessage());
@@ -196,15 +253,29 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
     /**
      * Invokes the @OnError method on the endpoint instance.
      */
-    private void invokeOnError(Object endpointInstance, Throwable cause) {
+    private void invokeOnError(Object endpointInstance, Throwable cause, Session session) {
         Method[] methods = endpointInstance.getClass().getDeclaredMethods();
         for (Method method : methods) {
             if (method.isAnnotationPresent(OnError.class)) {
                 try {
                     method.setAccessible(true);
-                    // Look for method with Throwable parameter
-                    if (method.getParameterCount() == 1 && method.getParameterTypes()[0].isAssignableFrom(Throwable.class)) {
+                    Class<?>[] paramTypes = method.getParameterTypes();
+                    
+                    // Try different parameter combinations
+                    if (paramTypes.length == 1 && paramTypes[0].isAssignableFrom(Throwable.class)) {
+                        // Method signature: void onError(Throwable throwable)
                         method.invoke(endpointInstance, cause);
+                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
+                               paramTypes[1].isAssignableFrom(Throwable.class)) {
+                        // Method signature: void onError(Session session, Throwable throwable)
+                        method.invoke(endpointInstance, session, cause);
+                    } else if (paramTypes.length == 2 && paramTypes[0].isAssignableFrom(Throwable.class) && 
+                               paramTypes[1] == Session.class) {
+                        // Method signature: void onError(Throwable throwable, Session session)
+                        method.invoke(endpointInstance, cause, session);
+                    } else {
+                        // Skip methods with unsupported signatures
+                        continue;
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnError: " + e.getMessage());
