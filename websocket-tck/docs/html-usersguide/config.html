@@ -1,0 +1,486 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Setup and Configuration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="css/style.css" rel="stylesheet">
+    <script src="https://use.fontawesome.com/96c4d89611.js"></script>
+  </head>
+  <body>
+<table id="doc-title" cellspacing="0" cellpadding="0">
+  <tr>
+  <td align="left" valign="top">
+  <b>Setup and Configuration</b><br />
+  </td>
+  </tr>
+</table>
+<hr />
+
+<table width="90%" id="top-nav" cellspacing="0" cellpadding="0">
+	<colgroup>
+		<col width="12%"/>
+		<col width="12%"/>
+		<col width="*"/>
+	</colgroup>
+	<tr>
+		<td align="left">
+		<a href="install.html">
+			<span class="vector-font"><i class="fa fa-arrow-circle-left" aria-hidden="true"></i></span>
+			<span style="position:relative;top:-2px;">Previous</span>
+		</a>
+		</td>
+
+		<td align="left">
+		<a href="using.html">
+			<span class=" vector-font"><i class="fa fa-arrow-circle-right vector-font" aria-hidden="true"></i></span>
+			<span style="position:relative;top:-2px;">Next</span>
+		</a>
+		</td>
+
+		<td align="right">
+		<a href="toc.html">
+			<span class=" vector-font"><i class="fa fa-list vector-font" aria-hidden="true"></i></span>
+			<span style="position:relative;top:-2px;">Contents</span>
+		</a>
+		</td>
+	</tr>
+</table>
+
+
+<div class="sect1">
+<h2 id="setup-and-configuration">4 Setup and Configuration</h2>
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The Jakarta EE Specification process provides for any number of compatible implementations.
+As additional implementations become available, refer to project or product documentation from
+those vendors for specific TCK setup and operational guidance.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>This chapter describes how to set up the WebSocket TCK and
+JavaTest harness software. Before proceeding with the instructions in
+this chapter, be sure to install all required software, as described in
+<a href="install.html#GBFTP">Chapter 3, "Installation."</a></p>
+</div>
+<div class="paragraph">
+<p>After completing the instructions in this chapter, proceed to
+<a href="using.html#GBFWO">Chapter 5, "Executing Tests,"</a> for instructions on
+running the WebSocket TCK.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The WebSocket TCK is not depended on any particular build
+tool to run the tests. It will be convenient and advisable to create a
+Apache Maven project to setup and run the TCK.
+This chapter will henceforth use instructions and steps to provide setup
+with Apache Maven as a build tool.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p><a id="GBFVU"></a><a id="configuring-your-environment-to-run-the-tck-against-the-reference-implementation"></a></p>
+</div>
+<div class="sect2">
+<h3 id="_4_1_configuring_your_environment_to_run_the_tck_against_the_compatible_implementation">4.1 Configuring Your Environment to Run the TCK Against the Compatible Implementation</h3>
+<div class="paragraph">
+<p>After configuring your environment as described in this section,
+continue with the instructions in <a href="using.html#GBFWO">Chapter 5, "Executing Tests."</a></p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In these instructions, variables in angle brackets need to be expanded
+for each platform. For example, <code>&lt;JAVA_HOME&gt;</code> becomes <code>$JAVA_HOME</code> on
+Solaris/Linux and <code>%JAVA_HOME%</code> on Windows. In addition, the forward
+slashes (<code>/</code>) used in all of the examples need to be replaced with
+backslashes (<code>\</code>) for Windows. Finally, be sure to use the appropriate
+separator for your operating system when specifying multiple path
+entries (<code>;</code> on Windows, <code>:</code> on UNIX/Linux).</p>
+</div>
+<div class="paragraph">
+<p>On Windows, you must escape any backslashes with an extra backslash in
+path separators used in any of the following properties, or use forward
+slashes as a path separator instead.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Set the following environment variables in your shell environment:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha">
+<li>
+<p><code>JAVA_HOME</code> to the directory in which Java SE 17+ is installed</p>
+</li>
+<li>
+<p><code>M2_HOME</code> to the directory in which the Apache Maven build tool is installed.</p>
+</li>
+<li>
+<p><code>WEBSOCKET_HOME</code> to the directory in which the WebSocket
+2.2 CI has been installed</p>
+</li>
+<li>
+<p><code>PATH</code> to include the following directories: <code>JAVA_HOME/bin</code>,
+and <code>M2_HOME/bin</code></p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Set the following System properties:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha">
+<li>
+<p>Set the <code>webServerHost</code> property to the name of the host on which
+Jakarta EE 11.0.0 CI is running.<br>
+The default setting is <code>localhost</code>.</p>
+</li>
+<li>
+<p>Set the <code>webServerPort</code> property to the port number of the host on
+which Jakarta EE 11.0.0 CI is running.<br>
+The default setting is <code>8080</code>.</p>
+</li>
+<li>
+<p>Set the <code>web.home</code> property to the installation directory of Jakarta EE
+11.0.0 CI.</p>
+</li>
+<li>
+<p>Set the <code>porting.ts.url.class.1</code> property to your porting
+implementation class that is used for obtaining URLs.<br>
+The default setting for this property is
+<code>com.sun.ts.tests.websocket.lib.implementation.sun.common.SunRIURL</code>.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Set the below jars to the classpath </p>
+<div class="olist loweralpha">
+<ol class="loweralpha">
+<li>
+<p>JAR file for the WebSocket 2.2 API.<br>
+eg.  <code>${web.home}/modules/jakarta.websocket-api.jar</code>.</p>
+</li>
+<li>
+<p>Arquillian JAR arquillian-junit5-container
+Maven cordinates :  </p>
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code data-lang="oac_no_warn">      &lt;dependency&gt;
+            &lt;groupId&gt;org.jboss.arquillian.junit5&lt;/groupId&gt;
+            &lt;artifactId&gt;arquillian-junit5-container&lt;/artifactId&gt;
+            &lt;version&gt;1.7.0.Alpha10&lt;/version&gt;
+      &lt;/dependency&gt;</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>JUnit 5 jars (5.7.2+)
+Maven cordinates :</p>
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code data-lang="oac_no_warn">       &lt;dependency&gt;
+          &lt;groupId&gt;org.junit&lt;/groupId&gt;
+          &lt;artifactId&gt;junit-bom&lt;/artifactId&gt;
+          &lt;version&gt;5.7.2&lt;/version&gt;
+          &lt;type&gt;pom&lt;/type&gt;
+          &lt;scope&gt;import&lt;/scope&gt;
+       &lt;/dependency&gt;</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>sigtest-maven-plugin (1.4) to run the signature tests.
+Maven cordinates :</p>
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code data-lang="oac_no_warn">      &lt;dependency&gt;
+            &lt;groupId&gt;org.netbeans.tools&lt;/groupId&gt;
+            &lt;artifactId&gt;sigtest-maven-plugin&lt;/artifactId&gt;
+            &lt;version&gt;1.4&lt;/version&gt;
+        &lt;/dependency&gt;</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Eclipse Tyrus 2.2 CI jars<br>
+ For eg, if you are using the Eclipse Tyrus 2.2 CI below jars need to be added to Classpath
+</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code data-lang="oac_no_warn">${web.home}/modules/jakarta.websocket-api.jar
+${web.home}/modules/jakarta.websocket-client-api.jar
+${web.home}/modules/jakarta.servlet-api.jar
+${web.home}/modules/jakarta.enterprise.cdi-api.jar
+${web.home}/modules/tyrus-websocket-core.jar
+${web.home}/modules/tyrus-client.jar
+${web.home}/modules/tyrus-core.jar
+${web.home}/modules/tyrus-container-grizzly.jar
+${web.home}/modules/glassfish-grizzly-extra-all.jar
+${web.home}/modules/nucleus-grizzly-all.jar
+${web.home}/modules/tyrus-server.jar
+${web.home}/modules/tyrus-container-servlet.jar
+${web.home}/modules/tyrus-container-grizzly-client.jar
+${web.home}/modules/tyrus-spi.jar</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Provide compatible implementation of the porting package interface
+provided with the WebSocket TCK.<br>
+The porting package interface, <code>TSURLInterface.java</code>, obtains URL
+strings for web resources in an implementation-specific manner. API
+documentation for the <code>TSURLInterface.java</code> porting package interface is
+available in the WebSocket TCK documentation bundle.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p><a id="GCLHU"></a><a id="configuring-your-environment-to-repackage-and-run-the-tck-against-the-vendor-implementation"></a></p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_4_2_configuring_your_environment_to_repackage_and_run_the_tck_against_the_vendor_implementation">4.2 Configuring Your Environment to Repackage and Run the TCK Against the Vendor Implementation</h3>
+<div class="paragraph">
+<p>After configuring your environment as described in this section,
+continue with the instructions in <a href="using.html#GBFWO">Chapter 5, "Executing Tests."</a></p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In these instructions, variables in angle brackets need to be expanded
+for each platform. For example, <code>&lt;JAVA_HOME&gt;</code> becomes <code>$JAVA_HOME</code> on
+Solaris/Linux and <code>%JAVA_HOME%</code> on Windows. In addition, the forward
+slashes (<code>/</code>) used in all of the examples need to be replaced with
+backslashes (<code>\</code>) for Windows. Finally, be sure to use the appropriate
+separator for your operating system when specifying multiple path
+entries (<code>;</code> on Windows, <code>:</code> on UNIX/Linux).</p>
+</div>
+<div class="paragraph">
+<p>On Windows, you must escape any backslashes with an extra backslash in
+path separators used in any of the following properties, or use forward
+slashes as a path separator instead.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect3">
+<h4 id="sthref9">Before You Begin</h4>
+<div class="paragraph">
+<p>Decide against which WebSocket implementation the tests
+will be run and determine to which Servlet–compliant Web server the
+WebSocket TCK applications will be published.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Set the following environment variables in your shell environment:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha">
+<li>
+<p><code>JAVA_HOME</code> to the directory in which Java SE 17+ is installed</p>
+</li>
+<li>
+<p><code>M2_HOME</code> to the directory in which the Apache Maven build tool is installed.</p>
+</li>
+<li>
+<p><code>WEBSOCKET_HOME</code> to the directory in which the WebSocket
+2.2 CI has been installed</p>
+</li>
+<li>
+<p><code>PATH</code> to include the following directories: <code>JAVA_HOME/bin</code>,
+and <code>M2_HOME/bin</code></p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Set the following System properties:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha">
+<li>
+<p>Set the <code>webServerHost</code> property to the name of the host on which
+Jakarta EE 11.0.0 CI is running.<br>
+The default setting is <code>localhost</code>.</p>
+</li>
+<li>
+<p>Set the <code>webServerPort</code> property to the port number of the host on
+which Jakarta EE 11.0.0 CI is running.<br>
+The default setting is <code>8080</code>.</p>
+</li>
+<li>
+<p>Set the <code>web.home</code> property to the installation directory of Jakarta EE
+11.0.0 CI.</p>
+</li>
+<li>
+<p>Set the <code>porting.ts.url.class.1</code> property to your porting
+implementation class that is used for obtaining URLs.<br>
+The default setting for this property is
+<code>com.sun.ts.lib.implementation.sun.common.SunRIURL</code>.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Set the below jars to the classpath </p>
+<div class="olist loweralpha">
+<ol class="loweralpha">
+<li>
+<p>JAR file for the WebSocket 2.2 API.<br>
+eg.  <code>${web.home}/modules/jakarta.websocket-api.jar</code>.</p>
+</li>
+<li>
+<p>Arquillian JAR arquillian-junit5-container
+Maven cordinates :  </p>
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code data-lang="oac_no_warn">      &lt;dependency&gt;
+            &lt;groupId&gt;org.jboss.arquillian.junit5&lt;/groupId&gt;
+            &lt;artifactId&gt;arquillian-junit5-container&lt;/artifactId&gt;
+            &lt;version&gt;1.7.0.Alpha10&lt;/version&gt;
+      &lt;/dependency&gt;</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>JUnit 5 jars (5.7.2+)
+Maven cordinates :</p>
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code data-lang="oac_no_warn">       &lt;dependency&gt;
+          &lt;groupId&gt;org.junit&lt;/groupId&gt;
+          &lt;artifactId&gt;junit-bom&lt;/artifactId&gt;
+          &lt;version&gt;5.7.2&lt;/version&gt;
+          &lt;type&gt;pom&lt;/type&gt;
+          &lt;scope&gt;import&lt;/scope&gt;
+       &lt;/dependency&gt;</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Eclipse Tyrus 2.2 CI jars<br>
+For eg, if you are using the Eclipse Tyrus 2.2 CI below jars need to be added to Classpath</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code data-lang="oac_no_warn">${web.home}/modules/jakarta.websocket-api.jar
+${web.home}/modules/jakarta.websocket-client-api.jar
+${web.home}/modules/jakarta.servlet-api.jar
+${web.home}/modules/jakarta.enterprise.cdi-api.jar
+${web.home}/modules/tyrus-websocket-core.jar
+${web.home}/modules/tyrus-client.jar
+${web.home}/modules/tyrus-core.jar
+${web.home}/modules/tyrus-container-grizzly.jar
+${web.home}/modules/glassfish-grizzly-extra-all.jar
+${web.home}/modules/nucleus-grizzly-all.jar
+${web.home}/modules/tyrus-server.jar
+${web.home}/modules/tyrus-container-servlet.jar
+${web.home}/modules/tyrus-container-grizzly-client.jar
+${web.home}/modules/tyrus-spi.jar</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Provide compatible implementation of the porting package interface
+provided with the WebSocket TCK.<br>
+The porting package interface, <code>TSURLInterface.java</code>, obtains URL
+strings for web resources in an implementation-specific manner. API
+documentation for the <code>TSURLInterface.java</code> porting package interface is
+available in the WebSocket TCK documentation bundle.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p><a id="GCRWX"></a><a id="deploying-the-java-api-for-websocket-tck-tests"></a></p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_4_3_deploying_the_java_api_for_websocket_tck_tests">4.3 Deploying the Java API for WebSocket TCK Tests</h3>
+<div class="paragraph">
+<p>The WebSocket TCK provides an automatic way of deploying
+both archives to the configured web
+container or containers by using arquillian Shrinkwrap API before the tests are run.</p>
+</div>
+</div>
+</div>
+</div>
+
+<hr />
+
+<table width="90%" id="bottom-nav" cellspacing="0" cellpadding="0">
+	<colgroup>
+		<col width="12%"/>
+		<col width="12%"/>
+		<col width="*"/>
+	</colgroup>
+	<tr>		
+		<td align="left">
+		<a href="install.html">
+			<span class=" vector-font"><i class="fa fa-arrow-circle-left" aria-hidden="true"></i></span>
+			<span style="position:relative;top:-2px;">Previous</span>
+		</a>
+		</td>
+
+		<td align="left">
+		<a href="using.html">
+			<span class="vector-font"><i class="fa fa-arrow-circle-right vector-font" aria-hidden="true"></i></span>
+			<span style="position:relative;top:-2px;">Next</span>
+		</a>
+		</td>
+
+		<td align="right">
+		<a href="toc.html">
+			<span class="vector-font"><i class="fa fa-list vector-font" aria-hidden="true"></i></span>
+			<span style="position:relative;top:-2px;">Contents</span>
+		</a>
+		</td>
+	</tr>
+</table>
+
+<span id="copyright">
+		<img src="img/eclipse_foundation_logo_tiny.png" height="20px" alt="Eclipse Foundation Logo" align="top"/>&nbsp;			
+		<span >Copyright&nbsp;&copy;&nbsp;2017,&nbsp;2021&nbsp;Oracle&nbsp;and/or&nbsp;its&nbsp;affiliates.&nbsp;All&nbsp;rights&nbsp;reserved.</span>
+</span>
+
+</body>
+</html>
