@@ -1,0 +1,149 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.osgi</groupId>
+		<artifactId>aggregator</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>osgi-websockets-compliance</artifactId>
+	<name>OSGi WebSocket Compliance Module</name>
+	<description>Module for running Jakarta WebSocket TCK tests against the OSGi implementation</description>
+	
+	<properties>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+		<junit-jupiter.version>5.10.2</junit-jupiter.version>
+		<arquillian.version>1.7.0.Alpha14</arquillian.version>
+		<tck.version>2.2.0</tck.version>
+	</properties>
+	
+	<dependencies>
+		<!-- Our WebSocket server implementation -->
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>osgi-websockets-server</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<!-- Jakarta WebSocket APIs -->
+		<dependency>
+			<groupId>jakarta.websocket</groupId>
+			<artifactId>jakarta.websocket-api</artifactId>
+			<version>2.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.websocket</groupId>
+			<artifactId>jakarta.websocket-client-api</artifactId>
+			<version>2.2.0</version>
+		</dependency>
+		
+		<!-- TCK Dependencies -->
+		<dependency>
+			<groupId>jakarta.tck</groupId>
+			<artifactId>websocket-tck-common</artifactId>
+			<version>${tck.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.tck</groupId>
+			<artifactId>websocket-tck-spec-tests</artifactId>
+			<version>${tck.version}</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<!-- JUnit 5 -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-api</artifactId>
+			<version>${junit-jupiter.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-engine</artifactId>
+			<version>${junit-jupiter.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-params</artifactId>
+			<version>${junit-jupiter.version}</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<!-- Arquillian for TCK -->
+		<dependency>
+			<groupId>org.jboss.arquillian.junit5</groupId>
+			<artifactId>arquillian-junit5-container</artifactId>
+			<version>${arquillian.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.arquillian.junit5</groupId>
+			<artifactId>arquillian-junit5-core</artifactId>
+			<version>${arquillian.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.11.0</version>
+				<configuration>
+					<source>17</source>
+					<target>17</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<skip>false</skip>
+					<!-- TCK tests may take longer -->
+					<forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
+				</configuration>
+			</plugin>
+			<!-- Skip bnd-maven-plugin for this module -->
+			<plugin>
+				<groupId>biz.aQute.bnd</groupId>
+				<artifactId>bnd-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>bnd-process</id>
+						<phase>none</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Skip bnd-testing-maven-plugin for this module -->
+			<plugin>
+				<groupId>biz.aQute.bnd</groupId>
+				<artifactId>bnd-testing-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>testing</id>
+						<phase>none</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Override jar plugin to not require MANIFEST.MF -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.4.2</version>
+				<configuration>
+					<archive>
+						<!-- Use generated manifest, not the bnd one -->
+						<manifestFile combine.self="override"/>
+					</archive>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>
