@@ -22,6 +22,7 @@ The server implementation is built from scratch without relying on Tyrus or othe
 ### Technology Stack
 
 - **Netty 4.1.107.Final**: High-performance asynchronous I/O framework
+  - Note: The issue specified version "4.2.7.Final" but Netty 4.2.x doesn't exist. The 4.1.x series is the stable, production-ready version as of 2024/2025.
 - **Jakarta WebSocket API 2.2.0**: Standard API for WebSocket communication
 - **Java 11**: Minimum Java version for compatibility
 
