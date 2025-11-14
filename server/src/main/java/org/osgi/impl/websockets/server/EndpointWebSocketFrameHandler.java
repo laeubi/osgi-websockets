@@ -57,28 +57,27 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             JakartaWebSocketServer.EndpointRegistration registration = 
                 ctx.channel().attr(WebSocketPathHandler.ENDPOINT_REGISTRATION_KEY).get();
             
-            if (registration != null) {
-                try {
-                    // Create endpoint instance using the handler or configurator
-                    Object endpointInstance;
-                    if (registration.handler != null) {
-                        // Use the new EndpointHandler API
-                        endpointInstance = registration.handler.createEndpointInstance(registration.endpointClass);
-                    } else {
-                        // Fall back to the old Configurator API (for backward compatibility)
-                        endpointInstance = registration.configurator.getEndpointInstance(registration.endpointClass);
-                    }
-                    ctx.channel().attr(ENDPOINT_INSTANCE_KEY).set(endpointInstance);
-                    
-                    // Register this channel with the endpoint
-                    registration.registerChannel(ctx.channel(), endpointInstance);
-                    
-                    // Invoke @OnOpen if present
-                    invokeOnOpen(endpointInstance, session);
-                } catch (Exception e) {
-                    System.err.println("Failed to create endpoint instance: " + e.getMessage());
-                    e.printStackTrace();
-                }
+            if (registration == null) {
+                // No endpoint registered for this path - close connection with error
+                System.err.println("No endpoint registered for path: " + handshake.requestUri());
+                ctx.close();
+                return;
+            }
+            
+            try {
+                // Create endpoint instance using the handler
+                Object endpointInstance = registration.handler.createEndpointInstance(registration.endpointClass);
+                ctx.channel().attr(ENDPOINT_INSTANCE_KEY).set(endpointInstance);
+                
+                // Register this channel with the endpoint
+                registration.registerChannel(ctx.channel(), endpointInstance);
+                
+                // Invoke @OnOpen if present
+                invokeOnOpen(endpointInstance, session);
+            } catch (Exception e) {
+                System.err.println("Failed to create endpoint instance: " + e.getMessage());
+                e.printStackTrace();
+                ctx.close();
             }
         }
         super.userEventTriggered(ctx, evt);
@@ -93,9 +92,9 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             // Get the endpoint instance for this channel
             Object endpointInstance = ctx.channel().attr(ENDPOINT_INSTANCE_KEY).get();
             if (endpointInstance == null) {
-                // No endpoint registered, use echo behavior
-                String response = "Echo: " + receivedText;
-                ctx.channel().writeAndFlush(new TextWebSocketFrame(response));
+                // No endpoint instance - this is an error
+                System.err.println("No endpoint instance found for channel");
+                ctx.close();
                 return;
             }
             
@@ -131,10 +130,10 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             // Invoke @OnClose if present
             invokeOnClose(endpointInstance, session);
             
-            // Notify the handler that the session has ended (if using new API)
+            // Notify the handler that the session has ended
             JakartaWebSocketServer.EndpointRegistration registration = 
                 ctx.channel().attr(WebSocketPathHandler.ENDPOINT_REGISTRATION_KEY).get();
-            if (registration != null && registration.handler != null) {
+            if (registration != null) {
                 try {
                     registration.handler.sessionEnded(endpointInstance);
                 } catch (Exception e) {

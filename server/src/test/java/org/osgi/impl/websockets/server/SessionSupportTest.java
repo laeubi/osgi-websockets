@@ -24,6 +24,24 @@ public class SessionSupportTest {
     private static final String HOSTNAME = "localhost";
     private static final int PORT = 8891;
     
+    private EndpointHandler createSimpleHandler() {
+        return new EndpointHandler() {
+            @Override
+            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+                try {
+                    return endpointClass.getDeclaredConstructor().newInstance();
+                } catch (Exception e) {
+                    throw new InstantiationException("Failed to create instance: " + e.getMessage());
+                }
+            }
+            
+            @Override
+            public void sessionEnded(Object endpointInstance) {
+                // No-op for this test
+            }
+        };
+    }
+    
     @BeforeEach
     public void setUp() throws Exception {
         server = new JakartaWebSocketServer(HOSTNAME, PORT);
@@ -39,7 +57,7 @@ public class SessionSupportTest {
     
     @Test
     public void testSessionIdIsProvided() throws Exception {
-        server.addEndpoint(SessionEndpoint.class, null, null);
+        server.createEndpoint(SessionEndpoint.class, null, createSimpleHandler());
         
         CountDownLatch messageLatch = new CountDownLatch(1);
         AtomicReference<String> receivedMessage = new AtomicReference<>();
@@ -75,7 +93,7 @@ public class SessionSupportTest {
     
     @Test
     public void testSessionRequestURI() throws Exception {
-        server.addEndpoint(SessionEndpoint.class, null, null);
+        server.createEndpoint(SessionEndpoint.class, null, createSimpleHandler());
         
         CountDownLatch messageLatch = new CountDownLatch(1);
         AtomicReference<String> receivedMessage = new AtomicReference<>();
@@ -111,7 +129,7 @@ public class SessionSupportTest {
     
     @Test
     public void testSessionIsOpen() throws Exception {
-        server.addEndpoint(SessionEndpoint.class, null, null);
+        server.createEndpoint(SessionEndpoint.class, null, createSimpleHandler());
         
         CountDownLatch messageLatch = new CountDownLatch(1);
         AtomicReference<String> receivedMessage = new AtomicReference<>();
@@ -147,7 +165,7 @@ public class SessionSupportTest {
     
     @Test
     public void testBasicRemoteEndpoint() throws Exception {
-        server.addEndpoint(SessionEndpoint.class, null, null);
+        server.createEndpoint(SessionEndpoint.class, null, createSimpleHandler());
         
         CountDownLatch messageLatch = new CountDownLatch(1);
         AtomicReference<String> receivedMessage = new AtomicReference<>();
@@ -183,7 +201,7 @@ public class SessionSupportTest {
     
     @Test
     public void testMultipleSessionsHaveUniqueIds() throws Exception {
-        server.addEndpoint(SessionEndpoint.class, null, null);
+        server.createEndpoint(SessionEndpoint.class, null, createSimpleHandler());
         
         // Create two connections
         CountDownLatch messageLatch1 = new CountDownLatch(1);

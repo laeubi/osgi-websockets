@@ -44,21 +44,12 @@ public class JakartaWebSocketServer {
     static class EndpointRegistration {
         final Class<?> endpointClass;
         final String effectivePath;
-        final ServerEndpointConfig.Configurator configurator;
         final EndpointHandler handler;
         private final Map<io.netty.channel.Channel, Object> activeChannels = new ConcurrentHashMap<>();
-        
-        EndpointRegistration(Class<?> endpointClass, String effectivePath, ServerEndpointConfig.Configurator configurator) {
-            this.endpointClass = endpointClass;
-            this.effectivePath = effectivePath;
-            this.configurator = configurator;
-            this.handler = null;
-        }
         
         EndpointRegistration(Class<?> endpointClass, String effectivePath, EndpointHandler handler) {
             this.endpointClass = endpointClass;
             this.effectivePath = effectivePath;
-            this.configurator = null;
             this.handler = handler;
         }
         
@@ -197,7 +188,6 @@ public class JakartaWebSocketServer {
     
     /**
      * Creates and registers a WebSocket endpoint with the server.
-     * This is the new API that replaces addEndpoint/removeEndpoint.
      * 
      * @param endpointClass The endpoint class annotated with @ServerEndpoint
      * @param path The path to register the endpoint at, or null to use the annotation's value
@@ -286,125 +276,6 @@ public class JakartaWebSocketServer {
         public String getPath() {
             return path;
         }
-    }
-    
-    /**
-     * Adds a WebSocket endpoint to the server.
-     * 
-     * @param endpoint The endpoint class annotated with @ServerEndpoint
-     * @param path The path to register the endpoint at, or null to use the annotation's value
-     * @param configurator The configurator to use for endpoint instance creation, or null to use the annotation's configurator
-     * @throws IllegalArgumentException if the endpoint class is not annotated with @ServerEndpoint, 
-     *         or if an endpoint with the same effective path is already registered
-     */
-    public void addEndpoint(Class<?> endpoint, String path, ServerEndpointConfig.Configurator configurator) {
-        if (endpoint == null) {
-            throw new IllegalArgumentException("Endpoint class cannot be null");
-        }
-        
-        // Check if the class has @ServerEndpoint annotation
-        ServerEndpoint annotation = endpoint.getAnnotation(ServerEndpoint.class);
-        if (annotation == null) {
-            throw new IllegalArgumentException("Endpoint class must be annotated with @ServerEndpoint: " + endpoint.getName());
-        }
-        
-        // Determine the effective path
-        String effectivePath = (path != null) ? path : annotation.value();
-        if (effectivePath == null || effectivePath.trim().isEmpty()) {
-            throw new IllegalArgumentException("Endpoint path cannot be null or empty");
-        }
-        
-        // Normalize path to ensure it starts with /
-        if (!effectivePath.startsWith("/")) {
-            effectivePath = "/" + effectivePath;
-        }
-        
-        // Determine the configurator to use
-        ServerEndpointConfig.Configurator effectiveConfigurator = configurator;
-        if (effectiveConfigurator == null) {
-            // Check if annotation specifies a custom configurator
-            Class<? extends ServerEndpointConfig.Configurator> annotationConfigurator = annotation.configurator();
-            if (annotationConfigurator != null && annotationConfigurator != ServerEndpointConfig.Configurator.class) {
-                // Annotation has a custom configurator, try to instantiate it
-                try {
-                    effectiveConfigurator = annotationConfigurator.getDeclaredConstructor().newInstance();
-                } catch (Exception e) {
-                    throw new IllegalArgumentException("Failed to instantiate configurator from annotation: " + annotationConfigurator.getName(), e);
-                }
-            }
-        }
-        
-        // Use default configurator if none specified
-        if (effectiveConfigurator == null) {
-            effectiveConfigurator = new ServerEndpointConfig.Configurator() {
-                @Override
-                public <T> T getEndpointInstance(Class<T> endpointClass) throws InstantiationException {
-                    try {
-                        return endpointClass.getDeclaredConstructor().newInstance();
-                    } catch (Exception e) {
-                        throw new InstantiationException("Failed to create endpoint instance: " + e.getMessage());
-                    }
-                }
-            };
-        }
-        
-        // Check for duplicate registration
-        EndpointRegistration existing = endpoints.get(effectivePath);
-        if (existing != null && existing.endpointClass.equals(endpoint)) {
-            throw new IllegalArgumentException("Endpoint class " + endpoint.getName() + 
-                " is already registered at path " + effectivePath);
-        }
-        
-        // Register the endpoint
-        EndpointRegistration registration = new EndpointRegistration(endpoint, effectivePath, effectiveConfigurator);
-        endpoints.put(effectivePath, registration);
-        
-        System.out.println("Registered endpoint " + endpoint.getName() + " at path " + effectivePath);
-    }
-    
-    /**
-     * Removes a WebSocket endpoint from the server.
-     * 
-     * @param endpoint The endpoint class to remove
-     * @param path The path the endpoint was registered at, or null to use the annotation's value
-     * @return true if the endpoint was removed, false if it wasn't registered
-     */
-    public boolean removeEndpoint(Class<?> endpoint, String path) {
-        if (endpoint == null) {
-            throw new IllegalArgumentException("Endpoint class cannot be null");
-        }
-        
-        // Check if the class has @ServerEndpoint annotation
-        ServerEndpoint annotation = endpoint.getAnnotation(ServerEndpoint.class);
-        if (annotation == null) {
-            throw new IllegalArgumentException("Endpoint class must be annotated with @ServerEndpoint: " + endpoint.getName());
-        }
-        
-        // Determine the effective path
-        String effectivePath = (path != null) ? path : annotation.value();
-        if (effectivePath == null || effectivePath.trim().isEmpty()) {
-            throw new IllegalArgumentException("Endpoint path cannot be null or empty");
-        }
-        
-        // Normalize path to ensure it starts with /
-        if (!effectivePath.startsWith("/")) {
-            effectivePath = "/" + effectivePath;
-        }
-        
-        // Check if the endpoint is registered
-        EndpointRegistration registration = endpoints.get(effectivePath);
-        if (registration == null || !registration.endpointClass.equals(endpoint)) {
-            return false;
-        }
-        
-        // Close all active sessions for this endpoint before removing it
-        registration.closeAllChannels();
-        
-        // Remove the endpoint
-        endpoints.remove(effectivePath);
-        
-        System.out.println("Removed endpoint " + endpoint.getName() + " from path " + effectivePath);
-        return true;
     }
     
     /**
