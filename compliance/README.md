@@ -17,6 +17,19 @@ The Jakarta WebSocket TCK is a comprehensive test suite designed to verify that 
   - `websocket-tck-spec-tests-2.2.0.jar`
 - ✅ Configured JUnit 5 and Arquillian dependencies
 - ✅ Basic module builds successfully
+- ✅ Created proof-of-concept manual test (`ManualServerTest`)
+- ✅ Verified our server can be tested programmatically
+- ✅ Demonstrated successful WebSocket connections and message exchange
+
+### Proof of Concept
+The `ManualServerTest` class demonstrates that:
+- Our WebSocket server can be started and stopped programmatically
+- Endpoints can be registered dynamically
+- WebSocket clients can connect and exchange messages
+- Multiple messages can be sent and received
+- Tests can verify server behavior
+
+This proves that manual TCK test integration is feasible and provides a foundation for more comprehensive testing.
 
 ### Pending
 - ⏳ Implement Arquillian container adapter for our WebSocket server
@@ -85,6 +98,36 @@ Currently, the module is set up with basic infrastructure but cannot execute TCK
 cd compliance
 mvn clean install
 ```
+
+### Run Tests
+
+Run all tests:
+```bash
+mvn test
+```
+
+Run the proof-of-concept manual test:
+```bash
+mvn test -Dtest=ManualServerTest
+```
+
+This test demonstrates:
+1. Starting our WebSocket server programmatically
+2. Registering test endpoints
+3. Connecting via WebSocket client
+4. Exchanging messages
+5. Verifying server behavior
+
+### Test Results (Current)
+
+As of now:
+- Manual server tests: **2/2 passing** ✅
+- These tests verify basic server functionality
+- Demonstrates our implementation can handle:
+  - Basic WebSocket connections
+  - Text message echo
+  - Multiple sequential messages
+  - Proper session lifecycle
 
 ### Run Tests (Future)
 
