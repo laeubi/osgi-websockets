@@ -109,6 +109,51 @@ com/sun/ts/tests/websocket/api/jakarta/websocket/[feature]/WSClientIT.class
 com/sun/ts/tests/websocket/ee/jakarta/websocket/[feature]/WSClientIT.class
 ```
 
+### TCK Infrastructure Components
+
+From analysis of the TCK jars, the following key components are included:
+
+1. **Test Cases** (`websocket-tck-spec-tests-2.2.0.jar`)
+   - Integration test classes (WSClientIT)
+   - Test endpoints and configurations
+   - Test scenarios for various features
+
+2. **Common Test Utilities** (`websocket-tck-common-2.2.0.jar`)
+   - `TCKExtension`: JUnit 5 extension for TCK tests
+   - `WebSocketTestCase`: Base class for test cases
+   - String bean encoders/decoders for testing
+   - Client endpoint implementations
+   - Test utilities and helpers
+
+3. **Test Execution Framework**
+   - Uses JUnit 5 as the test framework
+   - Requires Arquillian for deployment
+   - Tests expect a running WebSocket server
+   - Client-side tests that connect to server endpoints
+
+### Sample Test Categories
+
+From the TCK jar contents, tests cover:
+
+**API Tests:**
+- Client endpoint configuration (`clientendpointconfig`)
+- Server endpoint configuration (`serverendpointconfig`)
+- Close reason handling (`closereason`)
+- Decode/Encode exceptions (`decodeexception`, `encodeexception`)
+- Deployment exceptions (`deploymentException`)
+- WebSocket container (`websocketcontainer`)
+
+**EE Tests:**
+- Client endpoints (`clientendpoint`)
+- Client endpoint configurations (`clientendpointconfig`)
+- Client endpoint message handling (`clientendpointonmessage`)
+- Client endpoint return types (`clientendpointreturntype`)
+- Coders (encoders/decoders) (`coder`)
+- Container provider (`containerprovider`)
+- Server and client endpoint implementations (`endpoint`)
+- Remote endpoints (async/basic) (`remoteendpoint`)
+- User-defined coders (`remoteendpoint/usercoder`)
+
 ## Dependencies
 
 ### Required at Runtime
@@ -131,37 +176,99 @@ TCK artifacts are installed from `/websocket-tck/artifacts/`:
 - TCK Exclude List: `/websocket-tck/docs/TCK-Exclude-List.txt`
 - Release Notes: `/websocket-tck/docs/WebSocketTCK2.2-ReleaseNotes.html`
 
+## TCK Integration Approaches
+
+There are several possible approaches to run the TCK against our implementation:
+
+### Option 1: Arquillian Container Adapter (Standard Approach)
+Create a custom Arquillian container adapter that:
+- Starts/stops our WebSocket server
+- Deploys test archives
+- Manages test lifecycle
+
+**Pros:**
+- Standard TCK approach
+- Full test coverage
+- Official compliance
+
+**Cons:**
+- Complex implementation
+- Requires understanding Arquillian SPI
+- May require significant adapter code
+
+### Option 2: Manual Test Execution (Simplified Approach)
+Extract test logic and run tests directly against our server:
+- Start server manually in test setup
+- Import and run individual test classes
+- Adapt tests to work without Arquillian
+
+**Pros:**
+- Simpler to implement
+- More control over test execution
+- Easier debugging
+
+**Cons:**
+- Not official TCK execution
+- May miss some integration aspects
+- Requires test adaptation
+
+### Option 3: Bridge to Servlet Container
+Run our implementation inside a servlet container that has Arquillian support:
+- Deploy to Tomcat/Jetty with Arquillian adapter
+- Use servlet-based WebSocket endpoints
+- Leverage existing container adapters
+
+**Pros:**
+- Uses existing infrastructure
+- Standard deployment model
+- Well-supported
+
+**Cons:**
+- Requires servlet container integration
+- May not test standalone server
+- Additional dependencies
+
 ## Next Steps
 
-1. **Study Arquillian Integration**
-   - Review Arquillian documentation for custom container adapters
-   - Examine existing WebSocket TCK implementations (e.g., Tyrus, Tomcat)
-   - Determine the simplest integration approach for our architecture
+### Phase 1: Investigation (Current)
+- [x] Set up compliance module structure
+- [x] Install TCK artifacts
+- [x] Document TCK architecture
+- [ ] Analyze TCK test structure in detail
+- [ ] Study one reference implementation (e.g., Tyrus, Tomcat)
+- [ ] Decide on integration approach
 
-2. **Create Container Adapter**
-   - Implement Arquillian container SPI
-   - Integrate with our `JakartaWebSocketServer`
-   - Handle test deployment and lifecycle
+### Phase 2: Basic Integration
+1. **Choose Integration Approach**
+   - Evaluate all three options
+   - Consider effort vs. benefit
+   - Document decision rationale
 
-3. **Configure Test Execution**
-   - Create `arquillian.xml` configuration
-   - Set up test deployment mechanism
-   - Configure server port and endpoints
+2. **Implement Initial Test Runner**
+   - Create minimal working example
+   - Run one simple TCK test
+   - Verify test can connect to server
 
-4. **Run Initial Tests**
-   - Execute a subset of TCK tests
-   - Document failures and errors
-   - Categorize issues (implementation bugs vs. missing features)
+3. **Expand Test Coverage**
+   - Add more test classes gradually
+   - Document pass/fail results
+   - Track implementation gaps
 
-5. **Iterative Improvement**
-   - Fix failing tests systematically
-   - Update implementation to meet spec requirements
-   - Track compliance progress
+### Phase 3: Full Compliance
+1. **Run Complete Test Suite**
+   - Execute all TCK tests
+   - Generate compliance report
+   - Identify all failures
 
-6. **Document Results**
-   - Maintain list of passing/failing tests
+2. **Fix Implementation Issues**
+   - Prioritize critical failures
+   - Address missing features
+   - Fix bugs found by tests
+
+3. **Document Compliance Status**
+   - List passing tests
    - Document known limitations
-   - Create compliance report
+   - Create exclusion list if needed
 
 ## Contributing
 
