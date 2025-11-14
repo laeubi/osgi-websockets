@@ -39,6 +39,7 @@ public class NettyWebSocketSession implements Session {
     private final Set<MessageHandler> messageHandlers;
     private final BasicRemoteEndpointImpl basicRemote;
     private final AsyncRemoteEndpointImpl asyncRemote;
+    private EndpointCodecs codecs; // Encoders and decoders for this session
     
     private long maxIdleTimeout = 0;
     private int maxBinaryMessageBufferSize = 8192;
@@ -52,8 +53,23 @@ public class NettyWebSocketSession implements Session {
         this.requestParameterMap = new HashMap<>();
         this.userProperties = new ConcurrentHashMap<>();
         this.messageHandlers = new HashSet<>();
-        this.basicRemote = new BasicRemoteEndpointImpl(channel);
-        this.asyncRemote = new AsyncRemoteEndpointImpl(channel);
+        this.basicRemote = new BasicRemoteEndpointImpl(channel, this);
+        this.asyncRemote = new AsyncRemoteEndpointImpl(channel, this);
+    }
+    
+    /**
+     * Sets the endpoint codecs for this session.
+     * This is called when the session is initialized with an endpoint registration.
+     */
+    void setCodecs(EndpointCodecs codecs) {
+        this.codecs = codecs;
+    }
+    
+    /**
+     * Gets the endpoint codecs for this session.
+     */
+    EndpointCodecs getCodecs() {
+        return codecs;
     }
     
     @Override
@@ -213,9 +229,11 @@ public class NettyWebSocketSession implements Session {
      */
     private static class BasicRemoteEndpointImpl implements RemoteEndpoint.Basic {
         private final Channel channel;
+        private final NettyWebSocketSession session;
         
-        BasicRemoteEndpointImpl(Channel channel) {
+        BasicRemoteEndpointImpl(Channel channel, NettyWebSocketSession session) {
             this.channel = channel;
+            this.session = session;
         }
         
         @Override
@@ -258,7 +276,34 @@ public class NettyWebSocketSession implements Session {
         
         @Override
         public void sendObject(Object data) throws IOException {
-            throw new UnsupportedOperationException("Object encoding not yet implemented");
+            if (!channel.isActive()) {
+                throw new IOException("Channel is not active");
+            }
+            
+            EndpointCodecs codecs = session.getCodecs();
+            if (codecs == null) {
+                throw new IOException("No encoders configured for this endpoint");
+            }
+            
+            try {
+                // Try text encoder first
+                if (codecs.hasTextEncoder(data.getClass())) {
+                    String encoded = codecs.encodeText(data);
+                    sendText(encoded);
+                    return;
+                }
+                
+                // Try binary encoder
+                if (codecs.hasBinaryEncoder(data.getClass())) {
+                    java.nio.ByteBuffer encoded = codecs.encodeBinary(data);
+                    sendBinary(encoded);
+                    return;
+                }
+                
+                throw new IOException("No suitable encoder found for type: " + data.getClass().getName());
+            } catch (jakarta.websocket.EncodeException e) {
+                throw new IOException("Failed to encode object: " + e.getMessage(), e);
+            }
         }
         
         @Override
@@ -292,9 +337,11 @@ public class NettyWebSocketSession implements Session {
      */
     private static class AsyncRemoteEndpointImpl implements RemoteEndpoint.Async {
         private final Channel channel;
+        private final NettyWebSocketSession session;
         
-        AsyncRemoteEndpointImpl(Channel channel) {
+        AsyncRemoteEndpointImpl(Channel channel, NettyWebSocketSession session) {
             this.channel = channel;
+            this.session = session;
         }
         
         @Override
@@ -381,15 +428,83 @@ public class NettyWebSocketSession implements Session {
         
         @Override
         public void sendObject(Object data, jakarta.websocket.SendHandler handler) {
-            handler.onResult(new jakarta.websocket.SendResult(
-                new UnsupportedOperationException("Object encoding not yet implemented")
-            ));
+            if (!channel.isActive()) {
+                handler.onResult(new jakarta.websocket.SendResult(
+                    new IOException("Channel is not active")
+                ));
+                return;
+            }
+            
+            EndpointCodecs codecs = session.getCodecs();
+            if (codecs == null) {
+                handler.onResult(new jakarta.websocket.SendResult(
+                    new IOException("No encoders configured for this endpoint")
+                ));
+                return;
+            }
+            
+            try {
+                // Try text encoder first
+                if (codecs.hasTextEncoder(data.getClass())) {
+                    String encoded = codecs.encodeText(data);
+                    sendText(encoded, handler);
+                    return;
+                }
+                
+                // Try binary encoder
+                if (codecs.hasBinaryEncoder(data.getClass())) {
+                    java.nio.ByteBuffer encoded = codecs.encodeBinary(data);
+                    sendBinary(encoded, handler);
+                    return;
+                }
+                
+                handler.onResult(new jakarta.websocket.SendResult(
+                    new IOException("No suitable encoder found for type: " + data.getClass().getName())
+                ));
+            } catch (jakarta.websocket.EncodeException e) {
+                handler.onResult(new jakarta.websocket.SendResult(
+                    new IOException("Failed to encode object: " + e.getMessage(), e)
+                ));
+            }
         }
         
         @Override
         public java.util.concurrent.Future<Void> sendObject(Object data) {
             java.util.concurrent.CompletableFuture<Void> result = new java.util.concurrent.CompletableFuture<>();
-            result.completeExceptionally(new UnsupportedOperationException("Object encoding not yet implemented"));
+            
+            if (!channel.isActive()) {
+                result.completeExceptionally(new IOException("Channel is not active"));
+                return result;
+            }
+            
+            EndpointCodecs codecs = session.getCodecs();
+            if (codecs == null) {
+                result.completeExceptionally(new IOException("No encoders configured for this endpoint"));
+                return result;
+            }
+            
+            try {
+                // Try text encoder first
+                if (codecs.hasTextEncoder(data.getClass())) {
+                    String encoded = codecs.encodeText(data);
+                    return sendText(encoded);
+                }
+                
+                // Try binary encoder
+                if (codecs.hasBinaryEncoder(data.getClass())) {
+                    java.nio.ByteBuffer encoded = codecs.encodeBinary(data);
+                    return sendBinary(encoded);
+                }
+                
+                result.completeExceptionally(
+                    new IOException("No suitable encoder found for type: " + data.getClass().getName())
+                );
+            } catch (jakarta.websocket.EncodeException e) {
+                result.completeExceptionally(
+                    new IOException("Failed to encode object: " + e.getMessage(), e)
+                );
+            }
+            
             return result;
         }
         
