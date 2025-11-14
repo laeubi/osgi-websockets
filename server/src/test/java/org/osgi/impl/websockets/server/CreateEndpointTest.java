@@ -24,9 +24,9 @@ public class CreateEndpointTest {
     @Test
     public void testCreateEndpoint() {
         // Create a simple handler
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
@@ -35,13 +35,13 @@ public class CreateEndpointTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
                 // No-op for this test
             }
         };
         
         // Should successfully create an endpoint
-        WebSocketEndpoint endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
+        WebSocketEndpoint<TestEndpoint> endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
         assertNotNull(endpoint);
         assertEquals(TestEndpoint.class, endpoint.getEndpointClass());
         assertEquals("/test", endpoint.getPath());
@@ -49,9 +49,9 @@ public class CreateEndpointTest {
     
     @Test
     public void testCreateEndpointWithCustomPath() {
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
@@ -60,27 +60,27 @@ public class CreateEndpointTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
                 // No-op for this test
             }
         };
         
         // Should successfully create an endpoint with a custom path
-        WebSocketEndpoint endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, "/custom", handler));
+        WebSocketEndpoint<TestEndpoint> endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, "/custom", handler));
         assertNotNull(endpoint);
         assertEquals("/custom", endpoint.getPath());
     }
     
     @Test
     public void testCreateEndpointNullEndpoint() {
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 return null;
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
             }
         };
         
@@ -100,14 +100,14 @@ public class CreateEndpointTest {
     
     @Test
     public void testCreateEndpointWithoutAnnotation() {
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<InvalidEndpoint> handler = new EndpointHandler<InvalidEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public InvalidEndpoint createEndpointInstance(Class<InvalidEndpoint> endpointClass) throws InstantiationException {
                 return null;
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(InvalidEndpoint endpointInstance) {
             }
         };
         
@@ -119,9 +119,9 @@ public class CreateEndpointTest {
     
     @Test
     public void testCreateDuplicateEndpoint() {
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
@@ -130,12 +130,12 @@ public class CreateEndpointTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
             }
         };
         
         // Create endpoint first time
-        WebSocketEndpoint endpoint1 = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
+        WebSocketEndpoint<TestEndpoint> endpoint1 = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
         assertNotNull(endpoint1);
         
         // Should throw exception when creating the same endpoint again
@@ -146,9 +146,9 @@ public class CreateEndpointTest {
     
     @Test
     public void testDisposeEndpoint() {
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
@@ -157,12 +157,12 @@ public class CreateEndpointTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
             }
         };
         
         // Create endpoint
-        WebSocketEndpoint endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
+        WebSocketEndpoint<TestEndpoint> endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
         assertNotNull(endpoint);
         
         // Dispose it
@@ -174,9 +174,9 @@ public class CreateEndpointTest {
     
     @Test
     public void testDisposeEndpointTwice() {
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
@@ -185,12 +185,12 @@ public class CreateEndpointTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
             }
         };
         
         // Create endpoint
-        WebSocketEndpoint endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
+        WebSocketEndpoint<TestEndpoint> endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
         
         // Dispose it twice - should not throw
         assertDoesNotThrow(() -> endpoint.dispose());
@@ -199,9 +199,9 @@ public class CreateEndpointTest {
     
     @Test
     public void testCreateDisposeCreate() {
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
@@ -210,18 +210,18 @@ public class CreateEndpointTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
             }
         };
         
         // Create endpoint
-        WebSocketEndpoint endpoint1 = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
+        WebSocketEndpoint<TestEndpoint> endpoint1 = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
         
         // Dispose it
         endpoint1.dispose();
         
         // Create it again - should work
-        WebSocketEndpoint endpoint2 = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
+        WebSocketEndpoint<TestEndpoint> endpoint2 = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
         assertNotNull(endpoint2);
         
         // Verify it's registered
@@ -232,11 +232,11 @@ public class CreateEndpointTest {
     public void testHandlerInstanceTracking() {
         // Track instances created and sessions ended
         AtomicInteger instancesCreated = new AtomicInteger(0);
-        List<Object> endedInstances = new ArrayList<>();
+        List<TestEndpoint> endedInstances = new ArrayList<>();
         
-        EndpointHandler handler = new EndpointHandler() {
+        EndpointHandler<TestEndpoint> handler = new EndpointHandler<TestEndpoint>() {
             @Override
-            public <T> T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            public TestEndpoint createEndpointInstance(Class<TestEndpoint> endpointClass) throws InstantiationException {
                 instancesCreated.incrementAndGet();
                 try {
                     return endpointClass.getDeclaredConstructor().newInstance();
@@ -246,13 +246,13 @@ public class CreateEndpointTest {
             }
             
             @Override
-            public void sessionEnded(Object endpointInstance) {
+            public void sessionEnded(TestEndpoint endpointInstance) {
                 endedInstances.add(endpointInstance);
             }
         };
         
         // Create endpoint
-        WebSocketEndpoint endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
+        WebSocketEndpoint<TestEndpoint> endpoint = assertDoesNotThrow(() -> server.createEndpoint(TestEndpoint.class, null, handler));
         assertNotNull(endpoint);
         
         // Verify handler is properly set

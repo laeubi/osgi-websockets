@@ -186,6 +186,7 @@ public class JakartaWebSocketServer {
     /**
      * Creates and registers a WebSocket endpoint with the server.
      * 
+     * @param <T> The type of the endpoint class
      * @param endpointClass The endpoint class annotated with @ServerEndpoint
      * @param path The path to register the endpoint at, or null to use the annotation's value
      * @param handler The handler for creating endpoint instances and managing lifecycle (must not be null)
@@ -237,8 +238,10 @@ public class JakartaWebSocketServer {
     
     /**
      * Implementation of WebSocketEndpoint that wraps an EndpointRegistration.
+     * 
+     * @param <T> The type of the endpoint this wrapper supports
      */
-    private class WebSocketEndpointImpl implements WebSocketEndpoint {
+    private class WebSocketEndpointImpl<T> implements WebSocketEndpoint<T> {
         private final EndpointRegistration registration;
         private final String path;
         private volatile boolean disposed = false;
@@ -265,8 +268,9 @@ public class JakartaWebSocketServer {
         }
         
         @Override
-        public Class<?> getEndpointClass() {
-            return registration.endpointClass;
+        @SuppressWarnings("unchecked")
+        public Class<T> getEndpointClass() {
+            return (Class<T>) registration.endpointClass;
         }
         
         @Override

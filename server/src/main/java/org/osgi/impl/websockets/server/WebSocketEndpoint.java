@@ -4,6 +4,8 @@ package org.osgi.impl.websockets.server;
  * Represents a registered WebSocket endpoint.
  * This interface encapsulates the registration and provides a method to dispose of the endpoint,
  * which will unregister it and close all active sessions.
+ * 
+ * @param <T> The type of the endpoint that was registered
  */
 public interface WebSocketEndpoint<T> {
     
