@@ -42,12 +42,25 @@ public class JakartaWebSocketServer {
         final Class<?> endpointClass;
         final String effectivePath;
         final EndpointHandler handler;
+        final EndpointCodecs codecs;
         private final Map<io.netty.channel.Channel, Object> activeChannels = new ConcurrentHashMap<>();
         
         EndpointRegistration(Class<?> endpointClass, String effectivePath, EndpointHandler handler) {
             this.endpointClass = endpointClass;
             this.effectivePath = effectivePath;
             this.handler = handler;
+            
+            // Initialize encoders and decoders from the endpoint annotation
+            EndpointCodecs tempCodecs = null;
+            try {
+                tempCodecs = new EndpointCodecs(endpointClass, null);
+            } catch (InstantiationException e) {
+                System.err.println("Warning: Failed to initialize encoders/decoders for " + 
+                    endpointClass.getName() + ": " + e.getMessage());
+                // Create empty codecs as fallback
+                tempCodecs = null;
+            }
+            this.codecs = tempCodecs;
         }
         
         /**
@@ -74,6 +87,16 @@ public class JakartaWebSocketServer {
                 }
             }
             activeChannels.clear();
+        }
+        
+        /**
+         * Destroys the endpoint registration and cleans up resources.
+         */
+        void destroy() {
+            closeAllChannels();
+            if (codecs != null) {
+                codecs.destroy();
+            }
         }
     }
     
@@ -259,7 +282,8 @@ public class JakartaWebSocketServer {
             disposed = true;
             
             // Close all active sessions for this endpoint before removing it
-            registration.closeAllChannels();
+            // This also destroys the codecs
+            registration.destroy();
             
             // Remove the endpoint
             endpoints.remove(path);

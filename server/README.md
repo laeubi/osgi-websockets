@@ -115,6 +115,107 @@ public class ChatEndpoint {
 }
 ```
 
+### Using Encoders and Decoders
+
+The server supports custom encoders and decoders for converting between Java objects and WebSocket messages. This is useful for sending and receiving structured data.
+
+#### Creating an Encoder
+
+Encoders convert Java objects to text or binary messages:
+
+```java
+import jakarta.websocket.Encoder;
+import jakarta.websocket.EncodeException;
+import jakarta.websocket.EndpointConfig;
+
+// Text encoder example
+public class MessageEncoder implements Encoder.Text<Message> {
+    
+    @Override
+    public String encode(Message message) throws EncodeException {
+        return message.getContent() + "|" + message.getTimestamp();
+    }
+    
+    @Override
+    public void init(EndpointConfig config) {
+        // Initialization code if needed
+    }
+    
+    @Override
+    public void destroy() {
+        // Cleanup code if needed
+    }
+}
+```
+
+#### Creating a Decoder
+
+Decoders convert WebSocket messages to Java objects:
+
+```java
+import jakarta.websocket.Decoder;
+import jakarta.websocket.DecodeException;
+import jakarta.websocket.EndpointConfig;
+
+// Text decoder example
+public class MessageDecoder implements Decoder.Text<Message> {
+    
+    @Override
+    public Message decode(String s) throws DecodeException {
+        String[] parts = s.split("\\|");
+        return new Message(parts[0], Long.parseLong(parts[1]));
+    }
+    
+    @Override
+    public boolean willDecode(String s) {
+        // Return true if this decoder can decode the message
+        return s != null && s.contains("|");
+    }
+    
+    @Override
+    public void init(EndpointConfig config) {
+        // Initialization code if needed
+    }
+    
+    @Override
+    public void destroy() {
+        // Cleanup code if needed
+    }
+}
+```
+
+#### Using Encoders and Decoders in Endpoints
+
+Specify encoders and decoders in the `@ServerEndpoint` annotation:
+
+```java
+import jakarta.websocket.OnMessage;
+import jakarta.websocket.Session;
+import jakarta.websocket.server.ServerEndpoint;
+
+@ServerEndpoint(
+    value = "/message",
+    encoders = { MessageEncoder.class },
+    decoders = { MessageDecoder.class }
+)
+public class MessageEndpoint {
+    
+    @OnMessage
+    public void handleMessage(Message message, Session session) throws IOException {
+        // Receive a decoded Message object
+        System.out.println("Received: " + message.getContent());
+        
+        // Send an encoded Message object
+        Message response = new Message("Echo: " + message.getContent(), System.currentTimeMillis());
+        session.getBasicRemote().sendObject(response);
+    }
+}
+```
+
+The server automatically:
+- Uses decoders to convert incoming messages to your custom types
+- Uses encoders to convert your custom objects to messages when using `session.getBasicRemote().sendObject()` or `session.getAsyncRemote().sendObject()`
+
 ## Testing
 
 Tests use Java 11's built-in `HttpClient` WebSocket support to verify server functionality. This approach ensures we only test the external behavior rather than implementation details.
@@ -136,6 +237,8 @@ Current tests verify:
 6. Session lifecycle management
 7. Custom configurators
 8. The new `createEndpoint` API with `EndpointHandler`
+9. Binary message support
+10. Custom encoders and decoders
 
 ## Jakarta WebSocket Specification Compliance
 
@@ -148,17 +251,16 @@ This implementation aims to comply with the [Jakarta WebSocket Specification 2.2
 - ✅ Endpoint annotations (@ServerEndpoint, @OnMessage, @OnOpen, @OnClose, @OnError)
 - ✅ Session management with Jakarta WebSocket Session API
 - ✅ Dynamic endpoint registration and removal
-- ⚠️ Binary frames (not yet implemented)
-- ⚠️ Encoders/Decoders (not yet implemented)
+- ✅ Binary frames
+- ✅ Encoders/Decoders for custom message types
 
 ### Future Enhancements
 
-1. **Binary Frame Support**: Handle binary WebSocket frames
-2. **Encoders/Decoders**: Support for custom message encoding/decoding
-3. **Subprotocol Negotiation**: Support WebSocket subprotocol selection
-4. **Extension Support**: Implement WebSocket extensions (e.g., compression)
-5. **Connection Limits**: Add configurable connection limits and resource management
-6. **Security**: Add TLS/SSL support and authentication mechanisms
+1. **Subprotocol Negotiation**: Support WebSocket subprotocol selection
+2. **Extension Support**: Implement WebSocket extensions (e.g., compression)
+3. **Connection Limits**: Add configurable connection limits and resource management
+4. **Security**: Add TLS/SSL support and authentication mechanisms
+5. **Streaming Encoders/Decoders**: Support for `Encoder.BinaryStream` and `Encoder.TextStream`
 
 ## Configuration
 

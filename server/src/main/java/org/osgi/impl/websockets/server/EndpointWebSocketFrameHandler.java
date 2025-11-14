@@ -51,7 +51,7 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                 // Fallback to a simple URI if parsing fails
                 requestUri = java.net.URI.create("ws://localhost" + handshake.requestUri());
             }
-            Session session = new NettyWebSocketSession(ctx.channel(), requestUri);
+            NettyWebSocketSession session = new NettyWebSocketSession(ctx.channel(), requestUri);
             ctx.channel().attr(SESSION_KEY).set(session);
             
             // Now get the endpoint registration that was set by WebSocketPathHandler
@@ -64,6 +64,9 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                 ctx.close();
                 return;
             }
+            
+            // Set the endpoint codecs on the session
+            session.setCodecs(registration.codecs);
             
             try {
                 // Create endpoint instance using the handler
@@ -195,6 +198,14 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
      */
     private String invokeOnMessage(Object endpointInstance, String message, Session session) {
         Method[] methods = endpointInstance.getClass().getDeclaredMethods();
+        
+        // Get the endpoint registration to access codecs
+        JakartaWebSocketServer.EndpointRegistration registration = null;
+        if (session instanceof NettyWebSocketSession) {
+            NettyWebSocketSession nettySession = (NettyWebSocketSession) session;
+            // The codecs are already set on the session
+        }
+        
         for (Method method : methods) {
             if (method.isAnnotationPresent(OnMessage.class)) {
                 try {
@@ -214,6 +225,36 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                                paramTypes[1] == String.class) {
                         // Method signature: String onMessage(Session session, String message)
                         result = method.invoke(endpointInstance, session, message);
+                    } else if (paramTypes.length == 1 && paramTypes[0] != String.class) {
+                        // Method signature with decoder: void onMessage(CustomType message)
+                        // Try to decode the message using the endpoint's decoders
+                        Object decodedMessage = tryDecodeTextMessage(message, paramTypes[0], session);
+                        if (decodedMessage != null) {
+                            result = method.invoke(endpointInstance, decodedMessage);
+                        } else {
+                            // No decoder found, skip this method
+                            continue;
+                        }
+                    } else if (paramTypes.length == 2 && paramTypes[0] != String.class && 
+                               paramTypes[1] == Session.class) {
+                        // Method signature with decoder: void onMessage(CustomType message, Session session)
+                        Object decodedMessage = tryDecodeTextMessage(message, paramTypes[0], session);
+                        if (decodedMessage != null) {
+                            result = method.invoke(endpointInstance, decodedMessage, session);
+                        } else {
+                            // No decoder found, skip this method
+                            continue;
+                        }
+                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
+                               paramTypes[1] != String.class) {
+                        // Method signature with decoder: void onMessage(Session session, CustomType message)
+                        Object decodedMessage = tryDecodeTextMessage(message, paramTypes[1], session);
+                        if (decodedMessage != null) {
+                            result = method.invoke(endpointInstance, session, decodedMessage);
+                        } else {
+                            // No decoder found, skip this method
+                            continue;
+                        }
                     } else {
                         // Skip methods with unsupported signatures
                         continue;
@@ -223,10 +264,35 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnMessage: " + e.getMessage());
                     e.printStackTrace();
+                } catch (Exception e) {
+                    System.err.println("Error processing @OnMessage: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
         }
         return null;
+    }
+    
+    /**
+     * Tries to decode a text message to the target type using registered decoders.
+     */
+    private Object tryDecodeTextMessage(String message, Class<?> targetType, Session session) {
+        if (!(session instanceof NettyWebSocketSession)) {
+            return null;
+        }
+        
+        NettyWebSocketSession nettySession = (NettyWebSocketSession) session;
+        EndpointCodecs codecs = nettySession.getCodecs();
+        if (codecs == null) {
+            return null;
+        }
+        
+        try {
+            return codecs.decodeText(message, targetType);
+        } catch (Exception e) {
+            System.err.println("Failed to decode message: " + e.getMessage());
+            return null;
+        }
     }
     
     /**
