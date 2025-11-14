@@ -89,7 +89,8 @@
 				<version>3.4.2</version>
 				<configuration>
 					<archive>
-						<!-- Don't require a specific manifest file -->
+						<!-- Use generated manifest, not the bnd one -->
+						<manifestFile combine.self="override"/>
 					</archive>
 				</configuration>
 			</plugin>
