@@ -5,7 +5,7 @@ package org.osgi.impl.websockets.server;
  * This interface encapsulates the registration and provides a method to dispose of the endpoint,
  * which will unregister it and close all active sessions.
  */
-public interface WebSocketEndpoint {
+public interface WebSocketEndpoint<T> {
     
     /**
      * Disposes of this endpoint registration.
@@ -25,7 +25,7 @@ public interface WebSocketEndpoint {
      * 
      * @return The endpoint class
      */
-    Class<?> getEndpointClass();
+	Class<T> getEndpointClass();
     
     /**
      * Gets the path where this endpoint is registered.

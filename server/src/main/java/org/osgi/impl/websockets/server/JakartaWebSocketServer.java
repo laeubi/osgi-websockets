@@ -1,5 +1,8 @@
 package org.osgi.impl.websockets.server;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -10,15 +13,9 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-
 import jakarta.websocket.server.ServerEndpoint;
-import jakarta.websocket.server.ServerEndpointConfig;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A clean room implementation of a WebSocket server using Netty and Jakarta WebSocket APIs.
@@ -196,7 +193,7 @@ public class JakartaWebSocketServer {
      * @throws IllegalArgumentException if the endpoint class is not annotated with @ServerEndpoint,
      *         if handler is null, or if an endpoint with the same effective path is already registered
      */
-    public WebSocketEndpoint createEndpoint(Class<?> endpointClass, String path, EndpointHandler handler) {
+	public <T> WebSocketEndpoint<T> createEndpoint(Class<T> endpointClass, String path, EndpointHandler<T> handler) {
         if (endpointClass == null) {
             throw new IllegalArgumentException("Endpoint class cannot be null");
         }
