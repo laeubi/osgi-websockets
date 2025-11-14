@@ -41,7 +41,7 @@ public class JakartaWebSocketServer {
     /**
      * Inner class to hold endpoint registration information
      */
-    private static class EndpointRegistration {
+    static class EndpointRegistration {
         final Class<?> endpointClass;
         final String effectivePath;
         final ServerEndpointConfig.Configurator configurator;
