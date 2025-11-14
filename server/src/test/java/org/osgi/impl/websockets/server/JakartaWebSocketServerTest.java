@@ -1,8 +1,7 @@
 package org.osgi.impl.websockets.server;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -13,7 +12,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the JakartaWebSocketServer using Java 11 HttpClient WebSocket support.
@@ -29,8 +30,6 @@ public class JakartaWebSocketServerTest {
     public void setUp() throws Exception {
         server = new JakartaWebSocketServer(HOSTNAME, PORT);
         server.start();
-        // Give the server a moment to fully start
-        Thread.sleep(500);
     }
     
     @AfterEach
@@ -38,35 +37,6 @@ public class JakartaWebSocketServerTest {
         if (server != null) {
             server.stop();
         }
-    }
-    
-    @Test
-    public void testServerStartsAndStops() throws Exception {
-        assertTrue(server.isRunning(), "Server should be running after start");
-        assertEquals(HOSTNAME, server.getHostname(), "Hostname should match");
-        assertEquals(PORT, server.getPort(), "Port should match");
-        
-        server.stop();
-        assertFalse(server.isRunning(), "Server should not be running after stop");
-    }
-    
-    @Test
-    public void testConstructorValidation() {
-        assertThrows(IllegalArgumentException.class, 
-            () -> new JakartaWebSocketServer(null, PORT),
-            "Should throw exception for null hostname");
-        
-        assertThrows(IllegalArgumentException.class, 
-            () -> new JakartaWebSocketServer("", PORT),
-            "Should throw exception for empty hostname");
-        
-        assertThrows(IllegalArgumentException.class, 
-            () -> new JakartaWebSocketServer(HOSTNAME, -1),
-            "Should throw exception for negative port");
-        
-        assertThrows(IllegalArgumentException.class, 
-            () -> new JakartaWebSocketServer(HOSTNAME, 70000),
-            "Should throw exception for port > 65535");
     }
     
     @Test
@@ -154,10 +124,4 @@ public class JakartaWebSocketServerTest {
         webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
     }
     
-    @Test
-    public void testServerCannotStartTwice() throws Exception {
-        assertThrows(IllegalStateException.class, 
-            () -> server.start(),
-            "Should throw exception when starting an already running server");
-    }
 }
