@@ -15,7 +15,13 @@
 		<junit-jupiter.version>5.10.2</junit-jupiter.version>
 	</properties>
 	<dependencies>
-		<!-- Jakarta WebSocket API -->
+		<!-- Jakarta WebSocket Client API (base API) -->
+		<dependency>
+			<groupId>jakarta.websocket</groupId>
+			<artifactId>jakarta.websocket-client-api</artifactId>
+			<version>2.2.0</version>
+		</dependency>
+		<!-- Jakarta WebSocket Server API -->
 		<dependency>
 			<groupId>jakarta.websocket</groupId>
 			<artifactId>jakarta.websocket-api</artifactId>
