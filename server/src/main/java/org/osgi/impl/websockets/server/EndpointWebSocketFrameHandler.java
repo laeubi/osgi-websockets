@@ -4,6 +4,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
@@ -106,6 +107,26 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             if (response != null) {
                 ctx.channel().writeAndFlush(new TextWebSocketFrame(response));
             }
+        } else if (frame instanceof BinaryWebSocketFrame) {
+            BinaryWebSocketFrame binaryFrame = (BinaryWebSocketFrame) frame;
+            
+            // Get the endpoint instance for this channel
+            Object endpointInstance = ctx.channel().attr(ENDPOINT_INSTANCE_KEY).get();
+            if (endpointInstance == null) {
+                // No endpoint instance - this is an error
+                System.err.println("No endpoint instance found for channel");
+                ctx.close();
+                return;
+            }
+            
+            // Get the session for this channel
+            Session session = ctx.channel().attr(SESSION_KEY).get();
+            
+            // Convert ByteBuf to ByteBuffer
+            java.nio.ByteBuffer receivedData = binaryFrame.content().nioBuffer();
+            
+            // Find and invoke @OnMessage method for binary data
+            invokeOnBinaryMessage(endpointInstance, receivedData, session);
         } else {
             String message = "Unsupported frame type: " + frame.getClass().getName();
             throw new UnsupportedOperationException(message);
@@ -206,6 +227,67 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             }
         }
         return null;
+    }
+    
+    /**
+     * Invokes the @OnMessage method on the endpoint instance for binary messages.
+     */
+    private void invokeOnBinaryMessage(Object endpointInstance, java.nio.ByteBuffer data, Session session) {
+        Method[] methods = endpointInstance.getClass().getDeclaredMethods();
+        for (Method method : methods) {
+            if (method.isAnnotationPresent(OnMessage.class)) {
+                try {
+                    method.setAccessible(true);
+                    Class<?>[] paramTypes = method.getParameterTypes();
+                    
+                    // Try different parameter combinations for binary messages
+                    if (paramTypes.length == 1 && paramTypes[0] == java.nio.ByteBuffer.class) {
+                        // Method signature: void onMessage(ByteBuffer data)
+                        method.invoke(endpointInstance, data);
+                        return;
+                    } else if (paramTypes.length == 2 && paramTypes[0] == java.nio.ByteBuffer.class && 
+                               paramTypes[1] == Session.class) {
+                        // Method signature: void onMessage(ByteBuffer data, Session session)
+                        method.invoke(endpointInstance, data, session);
+                        return;
+                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
+                               paramTypes[1] == java.nio.ByteBuffer.class) {
+                        // Method signature: void onMessage(Session session, ByteBuffer data)
+                        method.invoke(endpointInstance, session, data);
+                        return;
+                    } else if (paramTypes.length == 1 && paramTypes[0] == byte[].class) {
+                        // Method signature: void onMessage(byte[] data)
+                        // Duplicate to avoid modifying the original buffer
+                        java.nio.ByteBuffer duplicate = data.duplicate();
+                        byte[] byteArray = new byte[duplicate.remaining()];
+                        duplicate.get(byteArray);
+                        method.invoke(endpointInstance, (Object) byteArray);
+                        return;
+                    } else if (paramTypes.length == 2 && paramTypes[0] == byte[].class && 
+                               paramTypes[1] == Session.class) {
+                        // Method signature: void onMessage(byte[] data, Session session)
+                        // Duplicate to avoid modifying the original buffer
+                        java.nio.ByteBuffer duplicate = data.duplicate();
+                        byte[] byteArray = new byte[duplicate.remaining()];
+                        duplicate.get(byteArray);
+                        method.invoke(endpointInstance, byteArray, session);
+                        return;
+                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
+                               paramTypes[1] == byte[].class) {
+                        // Method signature: void onMessage(Session session, byte[] data)
+                        // Duplicate to avoid modifying the original buffer
+                        java.nio.ByteBuffer duplicate = data.duplicate();
+                        byte[] byteArray = new byte[duplicate.remaining()];
+                        duplicate.get(byteArray);
+                        method.invoke(endpointInstance, session, byteArray);
+                        return;
+                    }
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    System.err.println("Failed to invoke @OnMessage for binary: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
     }
     
     /**

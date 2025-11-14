@@ -1,6 +1,8 @@
 package org.osgi.impl.websockets.server;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 
@@ -226,7 +228,12 @@ public class NettyWebSocketSession implements Session {
         
         @Override
         public void sendBinary(java.nio.ByteBuffer data) throws IOException {
-            throw new UnsupportedOperationException("Binary messages not yet implemented");
+            if (!channel.isActive()) {
+                throw new IOException("Channel is not active");
+            }
+            // Convert ByteBuffer to Netty ByteBuf - copy to avoid issues with buffer reuse
+            io.netty.buffer.ByteBuf buf = Unpooled.copiedBuffer(data);
+            channel.writeAndFlush(new BinaryWebSocketFrame(buf)).syncUninterruptibly();
         }
         
         @Override
@@ -336,15 +343,39 @@ public class NettyWebSocketSession implements Session {
         
         @Override
         public void sendBinary(java.nio.ByteBuffer data, jakarta.websocket.SendHandler handler) {
-            handler.onResult(new jakarta.websocket.SendResult(
-                new UnsupportedOperationException("Binary messages not yet implemented")
-            ));
+            if (!channel.isActive()) {
+                handler.onResult(new jakarta.websocket.SendResult(
+                    new IOException("Channel is not active")
+                ));
+                return;
+            }
+            // Convert ByteBuffer to Netty ByteBuf - copy to avoid issues with buffer reuse
+            io.netty.buffer.ByteBuf buf = Unpooled.copiedBuffer(data);
+            channel.writeAndFlush(new BinaryWebSocketFrame(buf)).addListener(future -> {
+                if (future.isSuccess()) {
+                    handler.onResult(new jakarta.websocket.SendResult());
+                } else {
+                    handler.onResult(new jakarta.websocket.SendResult(future.cause()));
+                }
+            });
         }
         
         @Override
         public java.util.concurrent.Future<Void> sendBinary(java.nio.ByteBuffer data) {
             java.util.concurrent.CompletableFuture<Void> result = new java.util.concurrent.CompletableFuture<>();
-            result.completeExceptionally(new UnsupportedOperationException("Binary messages not yet implemented"));
+            if (!channel.isActive()) {
+                result.completeExceptionally(new IOException("Channel is not active"));
+                return result;
+            }
+            // Convert ByteBuffer to Netty ByteBuf - copy to avoid issues with buffer reuse
+            io.netty.buffer.ByteBuf buf = Unpooled.copiedBuffer(data);
+            channel.writeAndFlush(new BinaryWebSocketFrame(buf)).addListener(future -> {
+                if (future.isSuccess()) {
+                    result.complete(null);
+                } else {
+                    result.completeExceptionally(future.cause());
+                }
+            });
             return result;
         }
         
