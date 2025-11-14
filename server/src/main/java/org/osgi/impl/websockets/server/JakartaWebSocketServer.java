@@ -94,8 +94,10 @@ public class JakartaWebSocketServer {
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast(new HttpServerCodec());
                         pipeline.addLast(new HttpObjectAggregator(65536));
-                        pipeline.addLast(new WebSocketServerProtocolHandler("/ws", null, true));
-                        pipeline.addLast(new WebSocketFrameHandler());
+                        // Add custom path handler to capture the request path
+                        pipeline.addLast(new WebSocketPathHandler(JakartaWebSocketServer.this));
+                        // The WebSocketServerProtocolHandler will be added dynamically by WebSocketPathHandler
+                        pipeline.addLast(new EndpointWebSocketFrameHandler(JakartaWebSocketServer.this));
                     }
                 });
             
