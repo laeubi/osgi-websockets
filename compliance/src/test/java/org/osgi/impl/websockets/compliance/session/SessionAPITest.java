@@ -423,6 +423,40 @@ public class SessionAPITest {
         ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
     }
     
+    /**
+     * Test Session.getQueryString() returns query string from request URI
+     * 
+     * TCK Reference: getQueryStringTest
+     * Specification: Section 2.5
+     */
+    @Test
+    public void testGetQueryString() throws Exception {
+        server.createEndpoint(GetQueryStringEndpoint.class, "/querystring", createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<String> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/querystring?param1=value1&param2=value2"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, 
+                                                     CharSequence data, 
+                                                     boolean last) {
+                        messageFuture.complete(data.toString());
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        ws.sendText("query", true);
+        String response = messageFuture.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("query:param1=value1&param2=value2", response);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+    }
+    
     // ===== Test Endpoint Implementations =====
     
     @ServerEndpoint("/isopen")
@@ -518,6 +552,15 @@ public class SessionAPITest {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+    
+    @ServerEndpoint("/querystring")
+    public static class GetQueryStringEndpoint {
+        @OnMessage
+        public String onMessage(String message, Session session) {
+            String queryString = session.getQueryString();
+            return "query:" + (queryString != null ? queryString : "null");
         }
     }
 }
