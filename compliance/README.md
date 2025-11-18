@@ -266,10 +266,10 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 ## Progress Tracking
 
 ### Phase 1: Core Compliance Tests
-- [x] Task 1: Basic API Tests (CloseReason, ServerEndpointConfig, Exceptions) - 5/20 (CloseReason complete ✅)
-  - ✅ CloseReason API: 5/6 tests (testGetCode, testCloseCodeGetCode, testValueOf, testConstructor, testGetCloseCode)
-  - [ ] ServerEndpointConfig API: 0/13 tests
-  - [ ] Exception handling: 0/6 tests
+- [x] Task 1: Basic API Tests (CloseReason, ServerEndpointConfig, Exceptions) - 25/25 ✅ **COMPLETE**
+  - ✅ CloseReason API: 6/6 tests (testGetCode, testCloseCodeGetCode, testValueOf, testConstructor, testGetCloseCode, testValues)
+  - ✅ ServerEndpointConfig API: 11/11 tests (testBasicBuilder, testSubprotocols, testEncoders, testDecoders, testBuilderWithMultipleConfigurations, testGetEndpointClass, testGetPath, testGetConfigurator, testCustomConfigurator, testCustomConfiguratorWithDefaults, testFullConfiguration)
+  - ✅ Exception handling: 8/8 tests (DecodeException: 4 tests, EncodeException: 2 tests, DeploymentException: 2 tests)
 - [ ] Task 2: Message Handling Tests - 0/40
 - [ ] Task 3: Encoder/Decoder Tests - 0/30
 - [ ] Task 4: Session API Tests - 0/25
@@ -290,16 +290,21 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 5/280 tests (1.8%)**
+**Total Progress: 25/280 tests (8.9%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 All compliance tests passing! ✅
+
+### Test Coverage Summary
+- **CloseReason API**: 6 tests - Basic close code and reason functionality
+- **ServerEndpointConfig API**: 11 tests - Builder pattern, encoders, decoders, subprotocols, configurators
+- **Exception APIs**: 8 tests - DecodeException, EncodeException, DeploymentException constructors
 
 ## References
 
