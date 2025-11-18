@@ -276,8 +276,16 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 5: Annotation Handler Tests - 0/15
 
 ### Phase 2: Negative Validation Tests
-- [ ] Task 6: Invalid Annotation Tests - 0/20
-- [ ] Task 7: Deployment Validation Tests - 0/10
+- [x] Task 6: Invalid Annotation Tests - 18/18 ✅ **COMPLETE**
+  - ✅ Duplicate @OnMessage tests: 3 tests (text, binary, pong)
+  - ✅ Invalid @OnMessage parameter tests: 5 tests (int, boolean position, PongMessage+boolean)
+  - ✅ Duplicate @OnOpen tests: 1 test
+  - ✅ Invalid @OnOpen parameter tests: 2 tests (too many args, invalid type)
+  - ✅ Duplicate @OnClose tests: 1 test
+  - ✅ Invalid @OnClose parameter tests: 2 tests (too many args, invalid type)
+  - ✅ Duplicate @OnError tests: 1 test
+  - ✅ Invalid @OnError parameter tests: 3 tests (too many args, missing Throwable, invalid type)
+- [ ] Task 7: Deployment Validation Tests - 0/12 (requires additional endpoint configurations)
 
 ### Phase 3: Advanced Features
 - [ ] Task 8: @PathParam Support - 0/25 (requires implementation)
@@ -290,13 +298,13 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 25/280 tests (8.9%)**
+**Total Progress: 43/280 tests (15.4%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 43, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 All compliance tests passing! ✅
@@ -305,6 +313,10 @@ All compliance tests passing! ✅
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
 - **ServerEndpointConfig API**: 11 tests - Builder pattern, encoders, decoders, subprotocols, configurators
 - **Exception APIs**: 8 tests - DecodeException, EncodeException, DeploymentException constructors
+- **Negative Validation**: 18 tests - Invalid endpoint annotations and configurations
+  - Duplicate annotation handlers (@OnMessage, @OnOpen, @OnClose, @OnError)
+  - Invalid @OnMessage parameters (int, boolean position, PongMessage combinations)
+  - Invalid @OnOpen, @OnClose, @OnError parameters (too many args, wrong types)
 
 ## References
 
