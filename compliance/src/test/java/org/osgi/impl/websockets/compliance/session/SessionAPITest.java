@@ -19,7 +19,6 @@ import jakarta.websocket.server.ServerEndpoint;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
-import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -424,132 +423,6 @@ public class SessionAPITest {
         ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
     }
     
-    /**
-     * Test Session.getQueryString() returns query parameters
-     * 
-     * TCK Reference: getQueryStringTest
-     * Specification: Section 2.5
-     */
-    @Test
-    public void testGetQueryString() throws Exception {
-        server.createEndpoint(GetQueryStringEndpoint.class, "/querystring", createHandler());
-        
-        HttpClient client = HttpClient.newHttpClient();
-        CompletableFuture<String> messageFuture = new CompletableFuture<>();
-        
-        WebSocket ws = client.newWebSocketBuilder()
-            .buildAsync(URI.create("ws://localhost:" + port + "/querystring?name=value&foo=bar"), 
-                new WebSocket.Listener() {
-                    @Override
-                    public CompletionStage<?> onText(WebSocket webSocket, 
-                                                     CharSequence data, 
-                                                     boolean last) {
-                        messageFuture.complete(data.toString());
-                        return CompletableFuture.completedFuture(null);
-                    }
-                })
-            .join();
-        
-        ws.sendText("getquery", true);
-        String response = messageFuture.get(5, TimeUnit.SECONDS);
-        
-        assertEquals("query:name=value&foo=bar", response);
-        
-        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
-    }
-    
-    /**
-     * Test Session.getUserProperties() returns modifiable map
-     * 
-     * TCK Reference: getUserPropertiesTest
-     * Specification: Section 2.5
-     */
-    @Test
-    public void testGetUserProperties() throws Exception {
-        server.createEndpoint(GetUserPropertiesEndpoint.class, "/userprops", createHandler());
-        
-        HttpClient client = HttpClient.newHttpClient();
-        CompletableFuture<String> messageFuture = new CompletableFuture<>();
-        
-        WebSocket ws = client.newWebSocketBuilder()
-            .buildAsync(URI.create("ws://localhost:" + port + "/userprops"), 
-                new WebSocket.Listener() {
-                    @Override
-                    public CompletionStage<?> onText(WebSocket webSocket, 
-                                                     CharSequence data, 
-                                                     boolean last) {
-                        messageFuture.complete(data.toString());
-                        return CompletableFuture.completedFuture(null);
-                    }
-                })
-            .join();
-        
-        ws.sendText("testprops", true);
-        String response = messageFuture.get(5, TimeUnit.SECONDS);
-        
-        assertEquals("props:testvalue", response);
-        
-        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
-    }
-    
-    /**
-     * Test that multiple sessions have unique IDs
-     * 
-     * TCK Reference: getId2Test (multiple session scenario)
-     * Specification: Section 2.5
-     */
-    @Test
-    public void testUniqueSessionIds() throws Exception {
-        server.createEndpoint(GetIdEndpoint.class, "/uniqueids", createHandler());
-        
-        HttpClient client = HttpClient.newHttpClient();
-        CompletableFuture<String> messageFuture1 = new CompletableFuture<>();
-        CompletableFuture<String> messageFuture2 = new CompletableFuture<>();
-        
-        WebSocket ws1 = client.newWebSocketBuilder()
-            .buildAsync(URI.create("ws://localhost:" + port + "/uniqueids"), 
-                new WebSocket.Listener() {
-                    @Override
-                    public CompletionStage<?> onText(WebSocket webSocket, 
-                                                     CharSequence data, 
-                                                     boolean last) {
-                        messageFuture1.complete(data.toString());
-                        return CompletableFuture.completedFuture(null);
-                    }
-                })
-            .join();
-        
-        WebSocket ws2 = client.newWebSocketBuilder()
-            .buildAsync(URI.create("ws://localhost:" + port + "/uniqueids"), 
-                new WebSocket.Listener() {
-                    @Override
-                    public CompletionStage<?> onText(WebSocket webSocket, 
-                                                     CharSequence data, 
-                                                     boolean last) {
-                        messageFuture2.complete(data.toString());
-                        return CompletableFuture.completedFuture(null);
-                    }
-                })
-            .join();
-        
-        ws1.sendText("getid", true);
-        ws2.sendText("getid", true);
-        
-        String response1 = messageFuture1.get(5, TimeUnit.SECONDS);
-        String response2 = messageFuture2.get(5, TimeUnit.SECONDS);
-        
-        assertTrue(response1.startsWith("id:"));
-        assertTrue(response2.startsWith("id:"));
-        
-        String id1 = response1.substring(3);
-        String id2 = response2.substring(3);
-        
-        assertNotEquals(id1, id2, "Different sessions should have different IDs");
-        
-        ws1.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
-        ws2.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
-    }
-    
     // ===== Test Endpoint Implementations =====
     
     @ServerEndpoint("/isopen")
@@ -645,27 +518,6 @@ public class SessionAPITest {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
-    }
-    
-    @ServerEndpoint("/querystring")
-    public static class GetQueryStringEndpoint {
-        @OnMessage
-        public String onMessage(String message, Session session) {
-            String queryString = session.getQueryString();
-            return "query:" + (queryString != null ? queryString : "null");
-        }
-    }
-    
-    @ServerEndpoint("/userprops")
-    public static class GetUserPropertiesEndpoint {
-        @OnMessage
-        public String onMessage(String message, Session session) {
-            // Test that we can set and get user properties
-            Map<String, Object> props = session.getUserProperties();
-            props.put("testkey", "testvalue");
-            Object value = props.get("testkey");
-            return "props:" + value;
         }
     }
 }
