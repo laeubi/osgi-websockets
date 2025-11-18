@@ -13,6 +13,7 @@ import io.netty.util.AttributeKey;
 public class WebSocketPathHandler extends ChannelInboundHandlerAdapter {
     
     static final AttributeKey<String> REQUEST_PATH_KEY = AttributeKey.valueOf("request_path");
+    static final AttributeKey<String> FULL_REQUEST_URI_KEY = AttributeKey.valueOf("full_request_uri");
     static final AttributeKey<JakartaWebSocketServer.EndpointRegistration> ENDPOINT_REGISTRATION_KEY = 
         AttributeKey.valueOf("endpoint_registration");
     
@@ -26,8 +27,11 @@ public class WebSocketPathHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             FullHttpRequest request = (FullHttpRequest) msg;
-            // Store the request path for later use
+            // Store the full request URI (including query string) for later use
             String uri = request.uri();
+            ctx.channel().attr(FULL_REQUEST_URI_KEY).set(uri);
+            
+            // Extract just the path (without query string) for endpoint matching
             String path = uri.contains("?") ? uri.substring(0, uri.indexOf("?")) : uri;
             ctx.channel().attr(REQUEST_PATH_KEY).set(path);
             

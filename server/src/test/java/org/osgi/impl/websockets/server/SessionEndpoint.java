@@ -35,6 +35,9 @@ public class SessionEndpoint {
             // Test using basic remote to send
             session.getBasicRemote().sendText("Response via BasicRemote");
             return null; // Already sent via BasicRemote
+        } else if (message.equals("test-query-string")) {
+            String queryString = session.getQueryString();
+            return "Query string: " + (queryString != null ? queryString : "null");
         } else {
             return "Echo: " + message;
         }
