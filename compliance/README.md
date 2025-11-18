@@ -270,7 +270,10 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - ✅ CloseReason API: 6/6 tests (testGetCode, testCloseCodeGetCode, testValueOf, testConstructor, testGetCloseCode, testValues)
   - ✅ ServerEndpointConfig API: 11/11 tests (testBasicBuilder, testSubprotocols, testEncoders, testDecoders, testBuilderWithMultipleConfigurations, testGetEndpointClass, testGetPath, testGetConfigurator, testCustomConfigurator, testCustomConfiguratorWithDefaults, testFullConfiguration)
   - ✅ Exception handling: 8/8 tests (DecodeException: 4 tests, EncodeException: 2 tests, DeploymentException: 2 tests)
-- [ ] Task 2: Message Handling Tests - 0/40
+- [x] Task 2: Message Handling Tests - 15/40 ✅ **PARTIALLY COMPLETE**
+  - ✅ Text message handling: 8/8 tests (String, String+Session, Session+String, custom decoder, return values, void return, empty string, large message)
+  - ✅ Binary message handling: 7/7 tests (ByteBuffer, byte[], ByteBuffer+Session, byte[]+Session, Session+ByteBuffer, large binary, empty binary)
+  - ⏸️ Primitive type conversion: 0/25 (requires server implementation - not yet supported)
 - [ ] Task 3: Encoder/Decoder Tests - 0/30
 - [ ] Task 4: Session API Tests - 0/25
 - [ ] Task 5: Annotation Handler Tests - 0/15
@@ -298,13 +301,13 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 43/280 tests (15.4%)**
+**Total Progress: 58/280 tests (20.7%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 43, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 58, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 All compliance tests passing! ✅
@@ -313,6 +316,8 @@ All compliance tests passing! ✅
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
 - **ServerEndpointConfig API**: 11 tests - Builder pattern, encoders, decoders, subprotocols, configurators
 - **Exception APIs**: 8 tests - DecodeException, EncodeException, DeploymentException constructors
+- **Text Message Handling**: 8 tests - String messages, session parameters, custom decoders, return values
+- **Binary Message Handling**: 7 tests - ByteBuffer, byte[], session parameters, large/empty messages
 - **Negative Validation**: 18 tests - Invalid endpoint annotations and configurations
   - Duplicate annotation handlers (@OnMessage, @OnOpen, @OnClose, @OnError)
   - Invalid @OnMessage parameters (int, boolean position, PongMessage combinations)
