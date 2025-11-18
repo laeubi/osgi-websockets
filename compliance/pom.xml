@@ -55,9 +55,10 @@
 	
 	<build>
 		<plugins>
-			<!-- Override parent configuration to enable unit tests -->
+			<!-- Override parent configuration to enable unit tests with JUnit 5 -->
 			<plugin>
 				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.2.5</version>
 				<configuration>
 					<skip>false</skip>
 				</configuration>
