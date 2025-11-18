@@ -144,4 +144,32 @@ public class CloseReasonAPITest {
                 "Expected CloseCode " + CODES[i] + " for getCloseCode(" + CODES_NUMBER[i] + ")");
         }
     }
+
+    /**
+     * Test CloseCodes.values() method
+     * 
+     * TCK Reference: valuesTest
+     * Specification: WebSocket:JAVADOC:26
+     */
+    @Test
+    public void testValues() {
+        CloseCodes[] returnedCodes = CloseReason.CloseCodes.values();
+        
+        // Verify all expected codes are present in the returned array
+        for (CloseCodes expectedCode : CODES) {
+            boolean found = false;
+            for (CloseCodes returnedCode : returnedCodes) {
+                if (returnedCode.equals(expectedCode)) {
+                    found = true;
+                    break;
+                }
+            }
+            assertTrue(found, 
+                "Expected CloseCodes " + expectedCode + " should be present in values() result");
+        }
+        
+        // Verify the returned array has the expected length
+        assertEquals(CODES.length, returnedCodes.length,
+            "CloseCodes.values() should return all " + CODES.length + " codes");
+    }
 }
