@@ -18,12 +18,12 @@ This is a Maven reactor project with 6 modules:
 ```
 /home/runner/work/osgi-websockets/osgi-websockets/
 ├── pom.xml                    # Root aggregator POM
-├── server/                    # Standalone Netty-based WebSocket server (Java 11)
+├── server/                    # Standalone Netty-based WebSocket server (Java 11) that should comply with jakarta specification - will be our new backend instead of tyrus!
 ├── client/                    # OSGi WebSocket client implementation (Java 17)
-├── runtime/                   # OSGi runtime with Tyrus integration (Java 17)
-├── tck/                       # OSGi integration tests with BND (Java 17)
+├── runtime/                   # OSGi runtime with Tyrus integration (Java 17) - only proof of concept - will be reworked!
+├── tck/                       # OSGi integration tests with BND (Java 17) -not yet completed - relate to the POC implementation!
 ├── compliance/                # Jakarta WebSocket TCK compliance tests (Java 17)
-└── websocket-tck/             # TCK artifacts and documentation (external)
+└── websocket-tck/             # TCK artifacts and documentation (external) - used as reference for our own compliance tests!
 ```
 
 ### Module Details
