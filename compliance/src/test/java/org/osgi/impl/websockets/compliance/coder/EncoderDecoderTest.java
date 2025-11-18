@@ -86,10 +86,8 @@ public class EncoderDecoderTest {
      * 
      * TCK Reference: WSCEndpointWithBinaryDecoder
      * Specification: Section 4.5.2
-     * 
-     * NOTE: Skipped - Binary encoder/decoder generic type resolution needs enhancement
      */
-    // @Test  
+    @Test  
     public void testBinaryEncoderDecoder() throws Exception {
         server.createEndpoint(BinaryEncoderDecoderEndpoint.class, null, createHandler());
         
