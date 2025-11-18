@@ -86,10 +86,8 @@ public class EncoderDecoderTest {
      * 
      * TCK Reference: WSCEndpointWithBinaryDecoder
      * Specification: Section 4.5.2
-     * 
-     * NOTE: Skipped - Binary encoder/decoder generic type resolution needs enhancement
      */
-    // @Test  
+    @Test  
     public void testBinaryEncoderDecoder() throws Exception {
         server.createEndpoint(BinaryEncoderDecoderEndpoint.class, null, createHandler());
         
@@ -216,11 +214,8 @@ public class EncoderDecoderTest {
      * 
      * TCK Reference: InitDestroyTextDecoder/InitDestroyTextEncoder
      * Specification: Section 4.5.1
-     * 
-     * NOTE: Skipped - Lifecycle tracking for text decoders/encoders with proper
-     * message handling needs more testing
      */
-    // @Test
+    @Test
     public void testEncoderDecoderLifecycle() throws Exception {
         // Reset counters
         LifecycleTextDecoder.initCount = 0;
@@ -432,7 +427,16 @@ public class EncoderDecoderTest {
         @Override
         public Counter decode(String s) throws DecodeException {
             String[] parts = s.split(":");
-            return new Counter(parts[0], parts.length > 1 ? Integer.parseInt(parts[1]) : 0);
+            int value = 0;
+            if (parts.length > 1) {
+                try {
+                    value = Integer.parseInt(parts[1]);
+                } catch (NumberFormatException e) {
+                    // If not a number, use 0 as default
+                    value = 0;
+                }
+            }
+            return new Counter(parts[0], value);
         }
         
         @Override

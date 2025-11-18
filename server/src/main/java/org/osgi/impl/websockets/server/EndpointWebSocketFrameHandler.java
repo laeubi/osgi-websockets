@@ -296,6 +296,28 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
     }
     
     /**
+     * Tries to decode a binary message to the target type using registered decoders.
+     */
+    private Object tryDecodeBinaryMessage(java.nio.ByteBuffer data, Class<?> targetType, Session session) {
+        if (!(session instanceof NettyWebSocketSession)) {
+            return null;
+        }
+        
+        NettyWebSocketSession nettySession = (NettyWebSocketSession) session;
+        EndpointCodecs codecs = nettySession.getCodecs();
+        if (codecs == null) {
+            return null;
+        }
+        
+        try {
+            return codecs.decodeBinary(data, targetType);
+        } catch (Exception e) {
+            System.err.println("Failed to decode binary message: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
      * Invokes the @OnMessage method on the endpoint instance for binary messages.
      */
     private void invokeOnBinaryMessage(Object endpointInstance, java.nio.ByteBuffer data, Session session) {
@@ -347,6 +369,42 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                         duplicate.get(byteArray);
                         method.invoke(endpointInstance, session, byteArray);
                         return;
+                    } else if (paramTypes.length == 1 && paramTypes[0] != java.nio.ByteBuffer.class && 
+                               paramTypes[0] != byte[].class) {
+                        // Method signature with decoder: void onMessage(CustomType message)
+                        // Try to decode the binary message using the endpoint's decoders
+                        Object decodedMessage = tryDecodeBinaryMessage(data, paramTypes[0], session);
+                        if (decodedMessage != null) {
+                            method.invoke(endpointInstance, decodedMessage);
+                            return;
+                        } else {
+                            // No decoder found, skip this method
+                            continue;
+                        }
+                    } else if (paramTypes.length == 2 && paramTypes[0] != java.nio.ByteBuffer.class && 
+                               paramTypes[0] != byte[].class && paramTypes[0] != Session.class && 
+                               paramTypes[1] == Session.class) {
+                        // Method signature with decoder: void onMessage(CustomType message, Session session)
+                        Object decodedMessage = tryDecodeBinaryMessage(data, paramTypes[0], session);
+                        if (decodedMessage != null) {
+                            method.invoke(endpointInstance, decodedMessage, session);
+                            return;
+                        } else {
+                            // No decoder found, skip this method
+                            continue;
+                        }
+                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
+                               paramTypes[1] != java.nio.ByteBuffer.class && 
+                               paramTypes[1] != byte[].class) {
+                        // Method signature with decoder: void onMessage(Session session, CustomType message)
+                        Object decodedMessage = tryDecodeBinaryMessage(data, paramTypes[1], session);
+                        if (decodedMessage != null) {
+                            method.invoke(endpointInstance, session, decodedMessage);
+                            return;
+                        } else {
+                            // No decoder found, skip this method
+                            continue;
+                        }
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnMessage for binary: " + e.getMessage());
