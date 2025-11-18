@@ -1,5 +1,7 @@
 package org.osgi.impl.websockets.compliance.negative;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.osgi.impl.websockets.server.EndpointHandler;
 import org.osgi.impl.websockets.server.JakartaWebSocketServer;
@@ -25,6 +27,23 @@ import static org.junit.jupiter.api.Assertions.*;
  * - WSC-5.2.1-3: Deployment errors must halt deployment and remove endpoints
  */
 public class NegativeValidationTest {
+    
+    private JakartaWebSocketServer server;
+    private static final String HOSTNAME = "localhost";
+    private static final int PORT = 8098;
+    
+    @BeforeEach
+    public void setUp() throws Exception {
+        server = new JakartaWebSocketServer(HOSTNAME, PORT);
+        server.start();
+    }
+    
+    @AfterEach
+    public void tearDown() {
+        if (server != null) {
+            server.stop();
+        }
+    }
     
     private <T> EndpointHandler<T> createHandler() {
         return new EndpointHandler<T>() {
@@ -54,8 +73,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testDuplicateTextMessageHandlers() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8080);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidOnMessageEndpoints.DuplicateTextMessageEndpoint.class,
@@ -77,8 +94,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testDuplicateBinaryMessageHandlers() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8081);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidOnMessageEndpoints.DuplicateBinaryMessageEndpoint.class,
@@ -100,8 +115,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testDuplicatePongMessageHandlers() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8082);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidOnMessageEndpoints.DuplicatePongEndpoint.class,
@@ -123,8 +136,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testTextMessageWithInvalidIntParameter() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8083);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidOnMessageEndpoints.TextMessageWithIntEndpoint.class,
@@ -147,8 +158,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testBooleanNotInLastPosition() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8084);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidOnMessageEndpoints.TextReaderBooleanEndpoint.class,
@@ -170,8 +179,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testBinaryByteBufferWithInvalidInt() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8085);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidOnMessageEndpoints.BinaryByteBufferIntEndpoint.class,
@@ -194,8 +201,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testBinaryInputStreamWithInvalidBoolean() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8086);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidOnMessageEndpoints.BinaryInputStreamBooleanEndpoint.class,
@@ -217,8 +222,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testPongMessageWithBoolean() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8087);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidOnMessageEndpoints.PongBooleanEndpoint.class,
@@ -242,8 +245,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testDuplicateOnOpen() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8088);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.DuplicateOnOpenEndpoint.class,
@@ -265,8 +266,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testOnOpenTooManyArgs() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8089);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.OnOpenTooManyArgsEndpoint.class,
@@ -287,8 +286,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testOnOpenInvalidParam() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8090);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.OnOpenInvalidParamEndpoint.class,
@@ -312,8 +309,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testDuplicateOnClose() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8091);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.DuplicateOnCloseEndpoint.class,
@@ -335,8 +330,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testOnCloseTooManyArgs() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8092);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.OnCloseTooManyArgsEndpoint.class,
@@ -357,8 +350,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testOnCloseInvalidParam() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8093);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.OnCloseInvalidParamEndpoint.class,
@@ -382,8 +373,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testDuplicateOnError() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8094);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.DuplicateOnErrorEndpoint.class,
@@ -405,8 +394,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testOnErrorTooManyArgs() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8095);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.OnErrorTooManyArgsEndpoint.class,
@@ -427,8 +414,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testOnErrorNoThrowable() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8096);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.OnErrorNoThrowableEndpoint.class,
@@ -449,8 +434,6 @@ public class NegativeValidationTest {
      */
     @Test
     public void testOnErrorInvalidParam() {
-        JakartaWebSocketServer server = new JakartaWebSocketServer("localhost", 8097);
-        
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             server.createEndpoint(
                 InvalidAnnotationEndpoints.OnErrorInvalidParamEndpoint.class,
