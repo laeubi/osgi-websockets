@@ -231,6 +231,9 @@ public class JakartaWebSocketServer {
             throw new IllegalArgumentException("Endpoint class must be annotated with @ServerEndpoint: " + endpointClass.getName());
         }
         
+        // Validate the endpoint class for compliance with Jakarta WebSocket specification
+        EndpointValidator.validateEndpoint(endpointClass);
+        
         // Determine the effective path
         String effectivePath = (path != null) ? path : annotation.value();
         if (effectivePath == null || effectivePath.trim().isEmpty()) {
