@@ -323,3 +323,266 @@ mvn compile -pl server 2>&1 | grep -i warning
 5. **Java version matters** - Server uses Java 11, other modules use Java 17
 6. **Tests take ~11 seconds for server module** - Fast feedback loop
 7. **All paths referenced here are absolute** - `/home/runner/work/osgi-websockets/osgi-websockets/...`
+
+---
+
+# Compliance Testing Instructions
+
+## Overview for Future Sessions
+
+When working on Jakarta WebSocket 2.2 compliance tests, follow this workflow to adapt TCK tests to our architecture.
+
+## TCK Test Adaptation Workflow
+
+### 1. Extract and Analyze TCK Tests
+
+```bash
+# Extract TCK sources to temporary directory
+cd /tmp && mkdir -p tck-explore && cd tck-explore
+unzip -q /home/runner/work/osgi-websockets/osgi-websockets/websocket-tck/artifacts/websocket-tck-spec-tests-2.2.0-sources.jar
+
+# Find relevant test files for a specific category
+find com/sun/ts/tests/websocket -name "*.java" | grep <category>
+```
+
+### 2. Understand Test Structure
+
+The TCK contains **737 test methods** in **93 test classes**:
+
+- **API Tests** (47 tests): CloseReason, ServerEndpointConfig, exceptions
+- **End-to-End Tests** (545+ tests): Full WebSocket functionality  
+- **Negative Tests** (45 files): Error conditions and validation
+
+See `/home/runner/work/osgi-websockets/osgi-websockets/compliance/README.md` for the complete feature matrix and implementation plan.
+
+### 3. Create Adapted Tests
+
+**DON'T**: Copy TCK tests as-is (they use Arquillian, Jakarta EE containers, complex setup)
+
+**DO**: Create simplified tests following our pattern:
+
+```java
+package org.osgi.impl.websockets.compliance.<category>;
+
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+
+import org.osgi.impl.websockets.server.JakartaWebSocketServer;
+import org.osgi.impl.websockets.server.WebSocketEndpoint;
+import org.osgi.impl.websockets.server.EndpointHandler;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.WebSocket;
+import java.util.concurrent.*;
+
+/**
+ * Compliance tests for [Feature Name]
+ * 
+ * Adapted from Jakarta WebSocket 2.2 TCK:
+ * - Original: com.sun.ts.tests.websocket.<path>.<TestClass>
+ * - Specification: Jakarta WebSocket 2.2, Section X.Y
+ */
+public class FeatureComplianceTest {
+    
+    private JakartaWebSocketServer server;
+    private int port;
+    
+    @BeforeEach
+    public void setUp() throws Exception {
+        port = 8080 + ThreadLocalRandom.current().nextInt(1000);
+        server = new JakartaWebSocketServer("localhost", port);
+        server.start();
+    }
+    
+    @AfterEach
+    public void tearDown() throws Exception {
+        if (server != null) {
+            server.stop();
+        }
+    }
+    
+    /**
+     * Test [description]
+     * 
+     * TCK Reference: [original test name]
+     * Specification: Section [X.Y]
+     */
+    @Test
+    public void testFeature() throws Exception {
+        // Register endpoint
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            TestEndpoint.class, "/test", createHandler());
+        
+        // Create WebSocket client using Java HttpClient
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<String> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/test"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, 
+                                                     CharSequence data, 
+                                                     boolean last) {
+                        messageFuture.complete(data.toString());
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        // Test scenario
+        ws.sendText("test message", true);
+        String response = messageFuture.get(5, TimeUnit.SECONDS);
+        
+        // Assertions (matching TCK test intent)
+        assertEquals("expected response", response);
+        
+        // Cleanup
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+        endpoint.dispose();
+    }
+    
+    private EndpointHandler createHandler() {
+        return new EndpointHandler() {
+            @Override
+            public <T> T createEndpointInstance(Class<T> endpointClass) 
+                    throws InstantiationException {
+                try {
+                    return endpointClass.getDeclaredConstructor().newInstance();
+                } catch (Exception e) {
+                    throw new InstantiationException("Failed: " + e.getMessage());
+                }
+            }
+            
+            @Override
+            public void sessionEnded(Object endpointInstance) {
+                // Cleanup if needed
+            }
+        };
+    }
+}
+```
+
+### 4. Test Organization
+
+Organize tests by category in `compliance/src/test/java/org/osgi/impl/websockets/compliance/`:
+
+```
+compliance/src/test/java/org/osgi/impl/websockets/compliance/
+├── api/              # API tests (CloseReason, ServerEndpointConfig, etc.)
+├── annotations/      # Annotation handler tests (@OnMessage, @OnOpen, etc.)
+├── coder/           # Encoder/Decoder tests
+├── session/         # Session API tests
+├── remoteendpoint/  # RemoteEndpoint tests (basic and async)
+├── server/          # Server-specific tests (PathParam, ServerApplicationConfig)
+├── negative/        # Negative validation tests
+└── util/            # Test utilities and helpers
+```
+
+### 5. Implementation Phases
+
+Follow the priority order defined in `compliance/README.md`:
+
+1. **Phase 1 (HIGH)**: Core compliance tests - verify existing features (~130 tests)
+2. **Phase 2 (MEDIUM)**: Negative validation tests - error handling (~30 tests)
+3. **Phase 3 (LOW)**: Advanced features requiring implementation (~105 tests)
+4. **Phase 4 (OPTIONAL)**: Optional specification features
+
+Start with **Phase 1, Task 1**: CloseReason API tests (6 tests)
+
+### 6. Test Execution
+
+```bash
+cd /home/runner/work/osgi-websockets/osgi-websockets
+
+# Test compliance module
+mvn test -pl compliance
+
+# Test specific test class
+mvn test -pl compliance -Dtest=CloseReasonComplianceTest
+
+# Always verify server module still passes
+mvn test -pl server
+```
+
+### 7. Update Progress
+
+After completing tests, update `compliance/README.md`:
+
+1. Mark completed tests in the Progress Tracking section
+2. Update test counts (e.g., "Task 1: Basic API Tests - 20/20 ✅")
+3. Update total progress percentage
+4. Commit with descriptive message
+
+## Key Principles for Compliance Testing
+
+### DO ✅
+- Always reference the original TCK test in comments
+- Keep test scenarios and assertions matching TCK intent
+- Use Java 11+ HttpClient for WebSocket client testing
+- Follow existing server module test patterns
+- Update progress in `compliance/README.md` after each task
+- Ensure all existing tests still pass
+- Document specification section references
+
+### DON'T ❌
+- Copy TCK test infrastructure (Arquillian, deployment descriptors)
+- Test client-specific features (unless from client perspective)
+- Add complex test dependencies
+- Skip documentation of test origins
+- Break existing server module functionality
+- Implement features not in the specification
+
+## Example Session Prompts
+
+**Starting Phase 1, Task 1:**
+```
+Implement Phase 1, Task 1 from compliance/README.md: Basic API Tests for CloseReason. 
+Extract the 6 tests from the TCK CloseReason test class, adapt them to our test 
+structure, and create CloseReasonComplianceTest.java.
+```
+
+**Implementing specific feature:**
+```
+Add @PathParam support to the server module based on the specification, then create 
+compliance tests adapted from the 25 TCK tests in 
+com.sun.ts.tests.websocket.ee.jakarta.websocket.server.pathparam
+```
+
+**Debugging failures:**
+```
+The SessionApiComplianceTest tests are failing. Analyze the failures, check our 
+implementation against the Jakarta WebSocket 2.2 specification Section 3, and 
+fix any issues.
+```
+
+## Specification References
+
+When working on compliance tests, reference:
+
+- **Specification**: https://jakarta.ee/specifications/websocket/2.2/jakarta-websocket-spec-2.2.pdf
+- **TCK User Guide**: `websocket-tck/docs/html-usersguide/`
+- **Implementation Plan**: `compliance/README.md`
+- **Server Documentation**: `server/README.md`
+
+## Success Criteria
+
+A compliance test task is complete when:
+
+1. ✅ All adapted tests pass
+2. ✅ Original TCK test references are documented
+3. ✅ Test organization follows defined structure
+4. ✅ Server module tests still pass
+5. ✅ Progress is updated in `compliance/README.md`
+6. ✅ Code is committed with clear message
+
+## Notes
+
+- We're testing the **server implementation**, not creating a full Jakarta EE environment
+- Focus on server-side WebSocket functionality
+- Client features are out of scope for the server module
+- Always test incrementally - port 5-10 tests at a time, not 50 at once
+- When in doubt, check existing server module test structure
