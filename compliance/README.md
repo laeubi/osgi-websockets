@@ -274,7 +274,13 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - ✅ Text message handling: 8/8 tests (String, String+Session, Session+String, custom decoder, return values, void return, empty string, large message)
   - ✅ Binary message handling: 7/7 tests (ByteBuffer, byte[], ByteBuffer+Session, byte[]+Session, Session+ByteBuffer, large binary, empty binary)
   - ⏸️ Primitive type conversion: 0/25 (requires server implementation - not yet supported)
-- [ ] Task 3: Encoder/Decoder Tests - 0/30
+- [x] Task 3: Encoder/Decoder Tests - 3/30 ✅ **PARTIALLY COMPLETE**
+  - ✅ Text encoder/decoder: 3/3 tests (simple object, willDecode, multiple decoders)
+  - ⏸️ Binary encoder/decoder: 0/2 (generic type resolution needs enhancement)
+  - ⏸️ Lifecycle tests: 0/2 (needs more investigation)
+  - ⏸️ Stream encoders/decoders: 0/10 (not implemented yet)
+  - ⏸️ Error handling: 0/5 (not implemented yet)
+  - ⏸️ Additional encoder/decoder tests: 0/8 (pending)
 - [ ] Task 4: Session API Tests - 0/25
 - [ ] Task 5: Annotation Handler Tests - 0/15
 
@@ -301,13 +307,13 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 58/280 tests (20.7%)**
+**Total Progress: 61/280 tests (21.8%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 58, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 61, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 All compliance tests passing! ✅
@@ -318,6 +324,7 @@ All compliance tests passing! ✅
 - **Exception APIs**: 8 tests - DecodeException, EncodeException, DeploymentException constructors
 - **Text Message Handling**: 8 tests - String messages, session parameters, custom decoders, return values
 - **Binary Message Handling**: 7 tests - ByteBuffer, byte[], session parameters, large/empty messages
+- **Encoder/Decoder**: 3 tests - Text encoder/decoder, willDecode, multiple decoders
 - **Negative Validation**: 18 tests - Invalid endpoint annotations and configurations
   - Duplicate annotation handlers (@OnMessage, @OnOpen, @OnClose, @OnError)
   - Invalid @OnMessage parameters (int, boolean position, PongMessage combinations)
