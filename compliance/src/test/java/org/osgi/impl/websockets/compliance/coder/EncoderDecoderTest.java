@@ -121,6 +121,112 @@ public class EncoderDecoderTest {
     }
     
     /**
+     * Test binary willDecode() method
+     * 
+     * TCK Reference: binaryDecoderWillDecodeTest
+     * Specification: Section 4.5.2
+     */
+    @Test
+    public void testBinaryWillDecode() throws Exception {
+        server.createEndpoint(BinaryWillDecodeEndpoint.class, null, createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<ByteBuffer> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/binarywilldecode"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onBinary(WebSocket webSocket, 
+                                                       ByteBuffer data, 
+                                                       boolean last) {
+                        messageFuture.complete(data);
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        // Send message that should be accepted by willDecode
+        ByteBuffer data = ByteBuffer.wrap("test:message".getBytes());
+        ws.sendBinary(data, true);
+        
+        ByteBuffer response = messageFuture.get(5, TimeUnit.SECONDS);
+        byte[] responseBytes = new byte[response.remaining()];
+        response.get(responseBytes);
+        String responseStr = new String(responseBytes);
+        
+        // Only the decoder with willDecode=true should process it
+        assertTrue(responseStr.contains("PROCESSED"), 
+            "Message should be processed by decoder with willDecode=true");
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+    }
+    
+    /**
+     * Test multiple binary decoders selection
+     * 
+     * TCK Reference: WSCEndpointWithBinaryDecoders
+     * Specification: Section 4.5.2
+     */
+    @Test
+    public void testMultipleBinaryDecoders() throws Exception {
+        server.createEndpoint(MultipleBinaryDecodersEndpoint.class, null, createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<ByteBuffer> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/multibinarydecode"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onBinary(WebSocket webSocket, 
+                                                       ByteBuffer data, 
+                                                       boolean last) {
+                        messageFuture.complete(data);
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        // Send message that matches the first decoder (starts with "TYPE1:")
+        ByteBuffer data1 = ByteBuffer.wrap("TYPE1:hello".getBytes());
+        ws.sendBinary(data1, true);
+        
+        ByteBuffer response1 = messageFuture.get(5, TimeUnit.SECONDS);
+        byte[] responseBytes1 = new byte[response1.remaining()];
+        response1.get(responseBytes1);
+        String responseStr1 = new String(responseBytes1);
+        assertEquals("DECODED_TYPE1:hello", responseStr1);
+        
+        // Send message that matches the second decoder (starts with "TYPE2:")
+        CompletableFuture<ByteBuffer> messageFuture2 = new CompletableFuture<>();
+        WebSocket ws2 = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/multibinarydecode"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onBinary(WebSocket webSocket, 
+                                                       ByteBuffer data, 
+                                                       boolean last) {
+                        messageFuture2.complete(data);
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        ByteBuffer data2 = ByteBuffer.wrap("TYPE2:world".getBytes());
+        ws2.sendBinary(data2, true);
+        
+        ByteBuffer response2 = messageFuture2.get(5, TimeUnit.SECONDS);
+        byte[] responseBytes2 = new byte[response2.remaining()];
+        response2.get(responseBytes2);
+        String responseStr2 = new String(responseBytes2);
+        assertEquals("DECODED_TYPE2:world", responseStr2);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+        ws2.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+    }
+    
+    /**
      * Test willDecode() method
      * 
      * TCK Reference: Various willDecode tests
@@ -532,6 +638,132 @@ public class EncoderDecoderTest {
             buffer.putInt(value);
             buffer.flip();
             return buffer;
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {}
+        
+        @Override
+        public void destroy() {}
+    }
+    
+    // Additional test endpoint classes
+    
+    @ServerEndpoint(value = "/binarywilldecode", 
+                    decoders = {BinaryWillDecodeDecoder.class}, 
+                    encoders = {BinaryStringEncoder.class})
+    public static class BinaryWillDecodeEndpoint {
+        @OnMessage
+        public void processMessage(BinaryString message, Session session) throws IOException, EncodeException {
+            // Append "PROCESSED" to indicate successful decoding
+            message.value = "PROCESSED:" + message.value;
+            session.getBasicRemote().sendObject(message);
+        }
+    }
+    
+    @ServerEndpoint(value = "/multibinarydecode", 
+                    decoders = {BinaryType1Decoder.class, BinaryType2Decoder.class}, 
+                    encoders = {BinaryStringEncoder.class})
+    public static class MultipleBinaryDecodersEndpoint {
+        @OnMessage
+        public void processMessage(BinaryString message, Session session) throws IOException, EncodeException {
+            session.getBasicRemote().sendObject(message);
+        }
+    }
+    
+    // Helper class for binary string messages
+    public static class BinaryString {
+        String value;
+        
+        public BinaryString(String value) {
+            this.value = value;
+        }
+    }
+    
+    // Binary decoders for willDecode test
+    public static class BinaryWillDecodeDecoder implements Decoder.Binary<BinaryString> {
+        @Override
+        public BinaryString decode(ByteBuffer bytes) throws DecodeException {
+            byte[] array = new byte[bytes.remaining()];
+            bytes.get(array);
+            return new BinaryString(new String(array));
+        }
+        
+        @Override
+        public boolean willDecode(ByteBuffer bytes) {
+            // Only decode if message contains ":"
+            byte[] array = new byte[bytes.remaining()];
+            bytes.get(array);
+            bytes.rewind(); // Reset position for decode()
+            String content = new String(array);
+            return content.contains(":");
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {}
+        
+        @Override
+        public void destroy() {}
+    }
+    
+    // Binary decoders for multiple decoder test
+    public static class BinaryType1Decoder implements Decoder.Binary<BinaryString> {
+        @Override
+        public BinaryString decode(ByteBuffer bytes) throws DecodeException {
+            byte[] array = new byte[bytes.remaining()];
+            bytes.get(array);
+            String content = new String(array);
+            // Remove "TYPE1:" prefix and add decode marker
+            return new BinaryString("DECODED_" + content);
+        }
+        
+        @Override
+        public boolean willDecode(ByteBuffer bytes) {
+            byte[] array = new byte[bytes.remaining()];
+            bytes.get(array);
+            bytes.rewind();
+            String content = new String(array);
+            return content.startsWith("TYPE1:");
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {}
+        
+        @Override
+        public void destroy() {}
+    }
+    
+    public static class BinaryType2Decoder implements Decoder.Binary<BinaryString> {
+        @Override
+        public BinaryString decode(ByteBuffer bytes) throws DecodeException {
+            byte[] array = new byte[bytes.remaining()];
+            bytes.get(array);
+            String content = new String(array);
+            // Remove "TYPE2:" prefix and add decode marker
+            return new BinaryString("DECODED_" + content);
+        }
+        
+        @Override
+        public boolean willDecode(ByteBuffer bytes) {
+            byte[] array = new byte[bytes.remaining()];
+            bytes.get(array);
+            bytes.rewind();
+            String content = new String(array);
+            return content.startsWith("TYPE2:");
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {}
+        
+        @Override
+        public void destroy() {}
+    }
+    
+    // Binary encoder for BinaryString
+    public static class BinaryStringEncoder implements Encoder.Binary<BinaryString> {
+        @Override
+        public ByteBuffer encode(BinaryString obj) throws EncodeException {
+            return ByteBuffer.wrap(obj.value.getBytes());
         }
         
         @Override

@@ -274,11 +274,11 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - ✅ Text message handling: 8/8 tests (String, String+Session, Session+String, custom decoder, return values, void return, empty string, large message)
   - ✅ Binary message handling: 7/7 tests (ByteBuffer, byte[], ByteBuffer+Session, byte[]+Session, Session+ByteBuffer, large binary, empty binary)
   - ✅ Primitive type conversion: 25/25 tests (boolean, byte, char, short, int, long, float, double - each with 3 parameter combinations, plus wrapper type test)
-- [x] Task 3: Encoder/Decoder Tests - 3/30 ✅ **PARTIALLY COMPLETE**
+- [x] Task 3: Encoder/Decoder Tests - 7/30 ✅ **PARTIALLY COMPLETE**
   - ✅ Text encoder/decoder: 3/3 tests (simple object, willDecode, multiple decoders)
-  - ⏸️ Binary encoder/decoder: 0/2 (generic type resolution needs enhancement)
-  - ⏸️ Lifecycle tests: 0/2 (needs more investigation)
-  - ⏸️ Stream encoders/decoders: 0/10 (not implemented yet)
+  - ✅ Binary encoder/decoder: 3/3 tests (simple object with custom type, willDecode, multiple decoders)
+  - ✅ Lifecycle tests: 1/1 test (init/destroy for text encoder/decoder)
+  - ⏸️ Stream encoders/decoders: 0/10 (not implemented yet - requires TextStream/BinaryStream support)
   - ⏸️ Error handling: 0/5 (not implemented yet)
   - ⏸️ Additional encoder/decoder tests: 0/8 (pending)
 - [x] Task 4: Session API Tests - 17/25 ✅ **COMPLETED (Core Features)**
@@ -318,16 +318,16 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 103/280 tests (36.8%)**
+**Total Progress: 107/280 tests (38.2%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 105, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 113, Failures: 0, Errors: 0, Skipped: 1
 ```
 
-All compliance tests passing! ✅ (Phase 1, Task 4 COMPLETED)
+All compliance tests passing! ✅ (Phase 1, Task 3 binary tests COMPLETED)
 
 ### Test Coverage Summary
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
@@ -339,7 +339,10 @@ All compliance tests passing! ✅ (Phase 1, Task 4 COMPLETED)
   - boolean, byte, char, short, int, long, float, double
   - Each primitive tested with 3 parameter combinations: (primitive), (primitive, Session), (Session, primitive)
   - Wrapper type validation (Integer)
-- **Encoder/Decoder**: 3 tests - Text encoder/decoder, willDecode, multiple decoders
+- **Encoder/Decoder**: 7 tests
+  - Text encoder/decoder: simple object, willDecode, multiple decoders
+  - Binary encoder/decoder: custom object (Integer), willDecode, multiple decoders  
+  - Lifecycle: init/destroy for text encoder/decoder
 - **Session API**: 17 tests - Complete core session functionality
   - getId(), isOpen(), close(), close(CloseReason)
   - getRequestURI(), getProtocolVersion()
