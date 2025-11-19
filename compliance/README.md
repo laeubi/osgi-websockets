@@ -57,6 +57,7 @@ Based on our current implementation (server module with 23 passing tests):
 - `@OnOpen`, `@OnMessage`, `@OnClose`, `@OnError` handlers
 - Text and binary message handling
 - Custom encoders/decoders (Text and Binary types)
+- **Streaming encoders/decoders (TextStream and BinaryStream)** ⭐ NEW
 - Basic Session API (getId, getBasicRemote, etc.)
 - CloseReason API
 - Exception handling (DecodeException, EncodeException)
@@ -68,7 +69,6 @@ Based on our current implementation (server module with 23 passing tests):
 
 ### ❌ Not Yet Implemented
 - `@PathParam` for URI template variables (25 TCK tests)
-- Streaming encoders/decoders (TextStream, BinaryStream)
 - Session timeout and message size limits
 - Subprotocol and extension negotiation
 - Handshake customization (HandshakeRequest/Response)
@@ -150,11 +150,6 @@ Based on our current implementation (server module with 23 passing tests):
     - Implement message size limits
     - Add open sessions tracking
     - **TCK Sources**: `com/sun/ts/tests/websocket/ee/jakarta/websocket/session11/`
-
-11. **Streaming Encoders/Decoders** (~20 tests)
-    - Implement TextStream and BinaryStream variants
-    - Add tests for streaming operations
-    - **TCK Sources**: `com/sun/ts/tests/websocket/ee/jakarta/websocket/coder/`
 
 ### Phase 4: Optional Features (Priority: OPTIONAL)
 **Goal**: Add features for complete specification coverage
@@ -274,13 +269,18 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - ✅ Text message handling: 8/8 tests (String, String+Session, Session+String, custom decoder, return values, void return, empty string, large message)
   - ✅ Binary message handling: 7/7 tests (ByteBuffer, byte[], ByteBuffer+Session, byte[]+Session, Session+ByteBuffer, large binary, empty binary)
   - ✅ Primitive type conversion: 25/25 tests (boolean, byte, char, short, int, long, float, double - each with 3 parameter combinations, plus wrapper type test)
-- [x] Task 3: Encoder/Decoder Tests - 7/30 ✅ **PARTIALLY COMPLETE**
+- [x] Task 3: Encoder/Decoder Tests - 16/30 ✅ **SIGNIFICANTLY COMPLETE**
   - ✅ Text encoder/decoder: 3/3 tests (simple object, willDecode, multiple decoders)
   - ✅ Binary encoder/decoder: 3/3 tests (simple object with custom type, willDecode, multiple decoders)
   - ✅ Lifecycle tests: 1/1 test (init/destroy for text encoder/decoder)
-  - ⏸️ Stream encoders/decoders: 0/10 (not implemented yet - requires TextStream/BinaryStream support)
-  - ⏸️ Error handling: 0/5 (not implemented yet)
-  - ⏸️ Additional encoder/decoder tests: 0/8 (pending)
+  - ✅ Stream encoders/decoders: 9/9 tests **COMPLETE** (TextStream and BinaryStream support implemented)
+    - TextStream encoder: Boolean, Integer, Long
+    - TextStream decoder: custom object
+    - BinaryStream encoder: Boolean, Integer, Long
+    - BinaryStream decoder: custom object
+    - Combined TextStream encoder/decoder: bidirectional
+  - ⏸️ Error handling: 0/5 (not implemented yet - requires encoder/decoder exception tests)
+  - ⏸️ Additional encoder/decoder tests: 0/8 (pending - advanced scenarios)
 - [x] Task 4: Session API Tests - 17/25 ✅ **COMPLETED (Core Features)**
   - ✅ Session lifecycle: 4/4 tests (isOpen, getId, close, close with reason)
   - ✅ Session configuration: 3/3 tests (maxIdleTimeout, maxBinaryBufferSize, maxTextBufferSize)
@@ -311,23 +311,22 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 8: @PathParam Support - 0/25 (requires implementation)
 - [ ] Task 9: Async Remote Endpoint - 0/40
 - [ ] Task 10: Session Management - 0/20 (requires implementation)
-- [ ] Task 11: Streaming Encoders/Decoders - 0/20 (requires implementation)
 
 ### Phase 4: Optional Features
 - [ ] Task 12: Handshake Customization - 0/10 (requires implementation)
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 107/280 tests (38.2%)**
+**Total Progress: 116/280 tests (41.4%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 113, Failures: 0, Errors: 0, Skipped: 1
+Tests run: 122, Failures: 0, Errors: 0, Skipped: 1
 ```
 
-All compliance tests passing! ✅ (Phase 1, Task 3 binary tests COMPLETED)
+All compliance tests passing! ✅ (Phase 1, Task 3 stream encoders/decoders COMPLETED)
 
 ### Test Coverage Summary
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
@@ -339,10 +338,16 @@ All compliance tests passing! ✅ (Phase 1, Task 3 binary tests COMPLETED)
   - boolean, byte, char, short, int, long, float, double
   - Each primitive tested with 3 parameter combinations: (primitive), (primitive, Session), (Session, primitive)
   - Wrapper type validation (Integer)
-- **Encoder/Decoder**: 7 tests
-  - Text encoder/decoder: simple object, willDecode, multiple decoders
-  - Binary encoder/decoder: custom object (Integer), willDecode, multiple decoders  
-  - Lifecycle: init/destroy for text encoder/decoder
+- **Encoder/Decoder**: 16 tests
+  - Text encoder/decoder: 3 tests (simple object, willDecode, multiple decoders)
+  - Binary encoder/decoder: 3 tests (custom object (Integer), willDecode, multiple decoders)
+  - Lifecycle: 1 test (init/destroy for text encoder/decoder)
+  - **Stream encoders/decoders**: 9 tests (TextStream and BinaryStream variants)
+    - TextStream encoder: Boolean, Integer, Long types
+    - TextStream decoder: custom object
+    - BinaryStream encoder: Boolean, Integer, Long types
+    - BinaryStream decoder: custom object
+    - Combined TextStream encoder/decoder: bidirectional message processing
 - **Session API**: 17 tests - Complete core session functionality
   - getId(), isOpen(), close(), close(CloseReason)
   - getRequestURI(), getProtocolVersion()
