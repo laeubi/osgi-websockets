@@ -45,12 +45,14 @@ public class JakartaWebSocketServer {
         final String effectivePath;
         final EndpointHandler handler;
         final EndpointCodecs codecs;
+        final URITemplate uriTemplate;
         private final Map<io.netty.channel.Channel, Object> activeChannels = new ConcurrentHashMap<>();
         
         EndpointRegistration(Class<?> endpointClass, String effectivePath, EndpointHandler handler) {
             this.endpointClass = endpointClass;
             this.effectivePath = effectivePath;
             this.handler = handler;
+            this.uriTemplate = new URITemplate(effectivePath);
             
             // Initialize encoders and decoders from the endpoint annotation
             EndpointCodecs tempCodecs = null;
@@ -317,12 +319,26 @@ public class JakartaWebSocketServer {
     
     /**
      * Gets the endpoint registration for a given path.
+     * This method supports both exact path matching and URI template matching.
      * 
      * @param path The path to look up
      * @return The endpoint registration, or null if no endpoint is registered at the path
      */
     EndpointRegistration getEndpointRegistration(String path) {
-        return endpoints.get(path);
+        // First try exact match (for endpoints without parameters)
+        EndpointRegistration exact = endpoints.get(path);
+        if (exact != null) {
+            return exact;
+        }
+        
+        // Try URI template matching
+        for (EndpointRegistration registration : endpoints.values()) {
+            if (registration.uriTemplate.matches(path)) {
+                return registration;
+            }
+        }
+        
+        return null;
     }
     
     /**

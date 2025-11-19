@@ -47,15 +47,19 @@ public class NettyWebSocketSession implements Session {
     private int maxTextMessageBufferSize = 8192;
     
     public NettyWebSocketSession(Channel channel, URI requestUri) {
-        this(channel, requestUri, null);
+        this(channel, requestUri, null, null);
     }
     
     public NettyWebSocketSession(Channel channel, URI requestUri, String rawQueryString) {
+        this(channel, requestUri, rawQueryString, null);
+    }
+    
+    public NettyWebSocketSession(Channel channel, URI requestUri, String rawQueryString, Map<String, String> pathParameters) {
         this.id = UUID.randomUUID().toString();
         this.channel = channel;
         this.requestUri = requestUri;
         this.rawQueryString = rawQueryString;
-        this.pathParameters = new HashMap<>();
+        this.pathParameters = pathParameters != null ? new HashMap<>(pathParameters) : new HashMap<>();
         this.requestParameterMap = new HashMap<>();
         this.userProperties = new ConcurrentHashMap<>();
         this.messageHandlers = new HashSet<>();
