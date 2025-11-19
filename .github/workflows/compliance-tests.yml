@@ -40,6 +40,6 @@ jobs:
       if: always()
       with:
         name: Compliance Test Results
-        path: compliance/target/surefire-reports/TEST-*.xml
+        path: **/target/surefire-reports/TEST-*.xml
         reporter: java-junit
         fail-on-error: true
