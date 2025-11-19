@@ -24,6 +24,7 @@ This is a Maven reactor project with 6 modules:
 ├── tck/                       # OSGi integration tests with BND (Java 17) -not yet completed - relate to the POC implementation!
 ├── compliance/                # Jakarta WebSocket TCK compliance tests (Java 17)
 ├── specifications/            # Contains important specifications our implementation must follow.
+├── docs/                      # Contains documents about past investigation of problems or limitations - might not always match current implementation (outdated) and is retained fro reference, check git history to understand to what issue it belongs.
 └── websocket-tck/             # TCK artifacts and documentation (external) - used as reference for our own compliance tests!
 ```
 
