@@ -23,6 +23,7 @@ This is a Maven reactor project with 6 modules:
 ├── runtime/                   # OSGi runtime with Tyrus integration (Java 17) - only proof of concept - will be reworked!
 ├── tck/                       # OSGi integration tests with BND (Java 17) -not yet completed - relate to the POC implementation!
 ├── compliance/                # Jakarta WebSocket TCK compliance tests (Java 17)
+├── specifications/            # Contains important specifications our implementation must follow.
 └── websocket-tck/             # TCK artifacts and documentation (external) - used as reference for our own compliance tests!
 ```
 
