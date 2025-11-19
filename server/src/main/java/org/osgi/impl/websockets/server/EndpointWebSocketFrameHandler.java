@@ -43,13 +43,20 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             WebSocketServerProtocolHandler.HandshakeComplete handshake = 
                 (WebSocketServerProtocolHandler.HandshakeComplete) evt;
             
-            // Create a Session for this connection
+            // Get the full request URI (with query string) that was stored by WebSocketPathHandler
+            String fullUri = ctx.channel().attr(WebSocketPathHandler.REQUEST_URI_KEY).get();
+            if (fullUri == null) {
+                // Fallback to handshake URI if not stored (shouldn't happen)
+                fullUri = handshake.requestUri();
+            }
+            
+            // Create a Session for this connection with the full URI
             java.net.URI requestUri;
             try {
-                requestUri = new java.net.URI(handshake.requestUri());
+                requestUri = new java.net.URI(fullUri);
             } catch (java.net.URISyntaxException e) {
                 // Fallback to a simple URI if parsing fails
-                requestUri = java.net.URI.create("ws://localhost" + handshake.requestUri());
+                requestUri = java.net.URI.create("ws://localhost" + fullUri);
             }
             NettyWebSocketSession session = new NettyWebSocketSession(ctx.channel(), requestUri);
             ctx.channel().attr(SESSION_KEY).set(session);
