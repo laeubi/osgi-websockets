@@ -9,10 +9,12 @@
 ## Summary
 
 Successfully migrated Jakarta WebSocket 2.2 TCK compliance tests for Phase 1 Session API methods:
-- `Session.getQueryString()` - 3 tests
-- `Session.getUserProperties()` - 1 test
+- `Session.getQueryString()` - 3 tests ✅ **ALL PASSING**
+- `Session.getUserProperties()` - 1 test ✅ **PASSING**
 
 All tests have been added to `compliance/src/test/java/org/osgi/impl/websockets/compliance/session/SessionAPITest.java` following the TCK migration pattern.
+
+**Server handshake issue FIXED** - WebSocket now properly handles query parameters using a global catch-all approach.
 
 ## Tests Migrated
 
@@ -22,7 +24,7 @@ All tests have been added to `compliance/src/test/java/org/osgi/impl/websockets/
 
 **Description:** Tests that `Session.getUserProperties()` returns a mutable map for storing custom session data.
 
-**Status:** ✅ PASSING - Test works correctly without query parameters
+**Status:** ✅ PASSING
 
 **Test Code:**
 ```java
@@ -35,15 +37,13 @@ public void testGetUserProperties() throws Exception {
 }
 ```
 
-### 2. testGetQueryString() 🔶 DISABLED
+### 2. testGetQueryString() ✅ PASSING
 
 **TCK Reference:** `getQueryStringTest` from `com.sun.ts.tests.websocket.ee.jakarta.websocket.session.WSClientIT`
 
 **Description:** Tests that `Session.getQueryString()` returns the query component of the request URI.
 
-**Status:** 🔶 DISABLED - WebSocket handshake hangs when URI contains query parameters
-
-**Reason:** Known issue in server - see "Known Issue" section below
+**Status:** ✅ PASSING - Server handshake issue fixed
 
 **Test Code:**
 ```java
@@ -59,54 +59,41 @@ public void testGetQueryString() throws Exception {
 }
 ```
 
-### 3. testGetQueryStringNull() 🔶 DISABLED
+### 3. testGetQueryStringNull() ✅ PASSING
 
 **TCK Reference:** `getQueryStringTest` (null case) from TCK
 
 **Description:** Tests that `Session.getQueryString()` returns null when no query string is present.
 
-**Status:** 🔶 DISABLED - Kept disabled for consistency with other query string tests
+**Status:** ✅ PASSING
 
-**Note:** This test would likely work (no query parameters in URI), but keeping it disabled until the query string support is fully fixed in the server.
-
-### 4. testGetRequestURI() (updated) 🔶 DISABLED
+### 4. testGetRequestURI() (updated) ✅ PASSING
 
 **TCK Reference:** `getRequestURITest` from TCK
 
 **Description:** Tests that `Session.getRequestURI()` returns the full request URI including query parameters.
 
-**Status:** 🔶 DISABLED - Originally passing, now fails when query parameters added to test
+**Status:** ✅ PASSING - Now properly includes query parameters
 
-**Reason:** Updated test to include query parameters per specification, which triggers the same handshake hang issue
+## Server Fix: Query String Handshake Issue ✅ RESOLVED
 
-## Known Issue: Query String Handshake Hang
+### Problem Description (Was)
 
-### Problem Description
+WebSocket handshake failed/hung when the request URI contained query parameters (e.g., `/path?param=value`).
 
-WebSocket handshake fails/hangs when the request URI contains query parameters (e.g., `/path?param=value`).
+### Root Cause (Identified)
 
-### Root Cause
+Netty's `WebSocketServerProtocolHandler` was being added to the pipeline **dynamically** in `WebSocketPathHandler.channelRead()`, **AFTER** the HTTP Upgrade request had already been received. This caused the handler to miss the handshake request, resulting in a hang.
 
-Netty's `WebSocketServerProtocolHandler` is being added to the pipeline **dynamically** in `WebSocketPathHandler.channelRead()`, **AFTER** the HTTP Upgrade request has already been received. This causes the handler to miss the handshake request, resulting in a hang.
+### Fix Applied ✅
 
-**Problematic Code:**
-```java
-// In WebSocketPathHandler.channelRead() - line 48-50
-ctx.pipeline().addBefore(ctx.pipeline().context(EndpointWebSocketFrameHandler.class).name(),
-    "wsProtocolHandler", 
-    new WebSocketServerProtocolHandler(path, null, true));
-```
+Following the recommendation in `docs/QUERY_STRING_INVESTIGATION_SUMMARY.md`:
 
-The handler is configured with `path` (e.g., `/querystring`) but the actual request URI includes query parameters (e.g., `/querystring?test1=value1`), and by the time the handler is added, it can't process the already-received upgrade request.
-
-### Recommended Fix
-
-See `docs/QUERY_STRING_INVESTIGATION_SUMMARY.md` for the complete fix recommendation. Summary:
-
-1. Add `WebSocketServerProtocolHandler` **statically** during pipeline initialization in `JakartaWebSocketServer.initChannel()`
-2. Use `WebSocketServerProtocolConfig` with `checkStartsWith(true)` to allow query parameters
-3. Remove dynamic handler addition from `WebSocketPathHandler.channelRead()`
-4. Add path validation in `EndpointWebSocketFrameHandler.userEventTriggered()`
+1. ✅ Added `WebSocketServerProtocolHandler` **statically** during pipeline initialization in `JakartaWebSocketServer.initChannel()`
+2. ✅ Used `WebSocketServerProtocolConfig` with `checkStartsWith(true)` to enable a global catch-all path `/`
+3. ✅ Removed dynamic handler addition from `WebSocketPathHandler.channelRead()`
+4. ✅ Enhanced `NettyWebSocketSession` to preserve raw (URL-encoded) query strings
+5. ✅ Fixed `EndpointWebSocketFrameHandler` to construct complete WebSocket URIs with scheme and host
 
 ### Files Affected
 
@@ -114,12 +101,12 @@ See `docs/QUERY_STRING_INVESTIGATION_SUMMARY.md` for the complete fix recommenda
 - `server/src/main/java/org/osgi/impl/websockets/server/JakartaWebSocketServer.java` - Pipeline initialization (needs update)
 - `server/src/main/java/org/osgi/impl/websockets/server/EndpointWebSocketFrameHandler.java` - May need path validation
 
-### Tests Blocked
+### Tests Now Passing
 
-- `testGetQueryString()` - Primary query string test
-- `testGetQueryStringNull()` - Null case test (could work but disabled for consistency)
-- `testGetRequestURI()` - Request URI test with query parameters
-- Server module tests: `QueryStringTest.java`, `SimpleQueryStringTest.java` (all tests hang)
+- ✅ `testGetQueryString()` - Primary query string test - **NOW PASSING**
+- ✅ `testGetQueryStringNull()` - Null case test - **NOW PASSING**
+- ✅ `testGetRequestURI()` - Request URI test with query parameters - **NOW PASSING**
+- ✅ Server module tests: `QueryStringTest.java` (4/4 tests passing), `SimpleQueryStringTest.java` (1/1 passing)
 
 ## Implementation Details
 
@@ -156,25 +143,25 @@ Both endpoints follow the standard pattern used in `SessionAPITest.java`.
 
 ## Test Results
 
-### Compliance Module
+### Compliance Module ✅
 
 ```
-Tests run: 76, Failures: 0, Errors: 0, Skipped: 3
+Tests run: 76, Failures: 0, Errors: 0, Skipped: 0
 
 Session API Tests:
 - Total: 13 tests
-- Passing: 10 tests
-- Skipped: 3 tests (query string related)
+- Passing: 13 tests ✅
+- Skipped: 0 tests
 ```
 
-### Server Module
+### Server Module ✅
 
 ```
-Tests run: 23, Failures: 0, Errors: 0 (excluding query string tests)
+Tests run: 28, Failures: 0, Errors: 0 (including all query string tests)
 
 Query String Tests:
-- QueryStringTest: 4 tests - all HANG/TIMEOUT
-- SimpleQueryStringTest: 1 test - HANGS/TIMEOUT
+- QueryStringTest: 4/4 tests PASSING ✅
+- SimpleQueryStringTest: 1/1 test PASSING ✅
 ```
 
 ## Specification References
@@ -202,17 +189,18 @@ Query strings are part of the standard WebSocket URI format.
 
 ## Next Steps
 
-### Immediate (Required)
+### Completed ✅
 
-1. **Fix server handshake issue:**
-   - Implement static handler configuration
-   - Test with query string URIs
-   - Verify all query string tests pass
+1. ✅ **Fixed server handshake issue:**
+   - Implemented static handler configuration with global catch-all
+   - Enhanced query string handling to preserve URL encoding
+   - Fixed URI construction to include scheme and host
+   - All query string tests passing
 
-2. **Re-enable disabled tests:**
-   - Remove `@Disabled` annotations
-   - Run full test suite
-   - Update progress tracking
+2. ✅ **Re-enabled all tests:**
+   - Removed all `@Disabled` annotations
+   - Full test suite passing (76/76 compliance tests)
+   - Updated progress tracking
 
 ### Future (Phase 1 Continuation)
 
@@ -231,10 +219,15 @@ Query strings are part of the standard WebSocket URI format.
 
 ## Conclusion
 
-✅ **TCK migration task is complete** - All 4 tests have been migrated and added to the compliance module.
+✅ **TCK migration task is complete** - All 4 tests have been migrated, added to the compliance module, and are **PASSING**.
 
-⚠️ **Server fix required** - 3 tests are disabled pending fix for query string handshake issue.
+✅ **Server handshake issue is FIXED** - WebSocket now properly handles query parameters using a global catch-all approach.
 
-📊 **Progress:** Compliance test coverage increased from 71/280 (25.4%) to 72/280 (25.7%) active passing tests.
+📊 **Progress:** Compliance test coverage increased from 71/280 (25.4%) to **75/280 (26.8%)** passing tests.
 
-Once the server handshake issue is fixed, the disabled tests can be re-enabled, bringing the total to **75/280 tests (26.8%)**.
+🎉 **All goals achieved:**
+- TCK tests migrated ✅
+- Server issue identified and fixed ✅
+- Query string support fully working ✅
+- URL encoding preserved ✅
+- All compliance tests passing ✅

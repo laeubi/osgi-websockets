@@ -43,22 +43,42 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             WebSocketServerProtocolHandler.HandshakeComplete handshake = 
                 (WebSocketServerProtocolHandler.HandshakeComplete) evt;
             
-            // Get the full request URI (with query string) that was stored by WebSocketPathHandler
-            String fullUri = ctx.channel().attr(WebSocketPathHandler.REQUEST_URI_KEY).get();
-            if (fullUri == null) {
+            // Get the full request URI path (with query string) that was stored by WebSocketPathHandler
+            String requestPath = ctx.channel().attr(WebSocketPathHandler.REQUEST_URI_KEY).get();
+            if (requestPath == null) {
                 // Fallback to handshake URI if not stored (shouldn't happen)
-                fullUri = handshake.requestUri();
+                requestPath = handshake.requestUri();
             }
+            
+            // Extract the raw query string (URL-encoded) before parsing the URI
+            String rawQueryString = null;
+            int queryStart = requestPath.indexOf('?');
+            if (queryStart >= 0 && queryStart < requestPath.length() - 1) {
+                rawQueryString = requestPath.substring(queryStart + 1);
+            }
+            
+            // Construct a complete WebSocket URI including scheme and host
+            // The request path is just the path + query (e.g., "/requesturi?param=value")
+            // We need to construct a full URI with the WebSocket scheme
+            String host = handshake.requestHeaders().get(HttpHeaderNames.HOST);
+            if (host == null) {
+                host = "localhost";
+            }
+            String fullUriString = "ws://" + host + requestPath;
             
             // Create a Session for this connection with the full URI
             java.net.URI requestUri;
             try {
-                requestUri = new java.net.URI(fullUri);
+                requestUri = new java.net.URI(fullUriString);
             } catch (java.net.URISyntaxException e) {
-                // Fallback to a simple URI if parsing fails
-                requestUri = java.net.URI.create("ws://localhost" + fullUri);
+                // Fallback if URI parsing fails
+                try {
+                    requestUri = new java.net.URI("ws://localhost" + requestPath);
+                } catch (java.net.URISyntaxException e2) {
+                    requestUri = java.net.URI.create("ws://localhost/");
+                }
             }
-            NettyWebSocketSession session = new NettyWebSocketSession(ctx.channel(), requestUri);
+            NettyWebSocketSession session = new NettyWebSocketSession(ctx.channel(), requestUri, rawQueryString);
             ctx.channel().attr(SESSION_KEY).set(session);
             
             // Now get the endpoint registration that was set by WebSocketPathHandler

@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import org.osgi.impl.websockets.server.JakartaWebSocketServer;
@@ -225,7 +224,6 @@ public class SessionAPITest {
      * TCK Reference: getRequestURITest
      * Specification: Section 2.5
      */
-    @Disabled("Known issue: WebSocket handshake hangs when URI contains query parameters - needs server fix")
     @Test
     public void testGetRequestURI() throws Exception {
         server.createEndpoint(GetRequestURIEndpoint.class, "/requesturi", createHandler());
@@ -435,7 +433,6 @@ public class SessionAPITest {
      * According to Jakarta WebSocket 2.2 Issue 228, this method should return
      * the query component of the request URI.
      */
-    @Disabled("Known issue: WebSocket handshake hangs when URI contains query parameters - needs server fix")
     @Test
     public void testGetQueryString() throws Exception {
         server.createEndpoint(GetQueryStringEndpoint.class, "/querystring", createHandler());
@@ -471,11 +468,7 @@ public class SessionAPITest {
      * 
      * TCK Reference: getQueryStringTest (null case)
      * Specification: Section 2.5 (Session.getQueryString())
-     * 
-     * NOTE: This test should work since it doesn't use query parameters,
-     * but keeping it disabled for consistency with other getQueryString tests.
      */
-    @Disabled("Keeping disabled for consistency - re-enable when query string support is fully fixed")
     @Test
     public void testGetQueryStringNull() throws Exception {
         server.createEndpoint(GetQueryStringEndpoint.class, "/querystring", createHandler());

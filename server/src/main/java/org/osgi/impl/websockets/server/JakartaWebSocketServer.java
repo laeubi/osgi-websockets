@@ -13,6 +13,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -142,9 +143,16 @@ public class JakartaWebSocketServer {
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast(new HttpServerCodec());
                         pipeline.addLast(new HttpObjectAggregator(65536));
-                        // Add custom path handler to capture the request path
+                        // Add custom path handler to capture the request path and endpoint registration
                         pipeline.addLast(new WebSocketPathHandler(JakartaWebSocketServer.this));
-                        // The WebSocketServerProtocolHandler will be added dynamically by WebSocketPathHandler
+                        // Add WebSocket protocol handler statically with catch-all path "/"
+                        // This allows query strings and any WebSocket path to work correctly
+                        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                            .websocketPath("/")
+                            .checkStartsWith(true)  // Allow any path starting with "/"
+                            .build();
+                        pipeline.addLast(new WebSocketServerProtocolHandler(config));
+                        // Add frame handler for dispatching to registered endpoints
                         pipeline.addLast(new EndpointWebSocketFrameHandler(JakartaWebSocketServer.this));
                     }
                 });
