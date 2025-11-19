@@ -36,10 +36,9 @@ jobs:
       run: mvn test -pl compliance
       
     - name: Publish Test Report
-      uses: dorny/test-reporter@v1
-      if: always()
+      uses: dorny/test-reporter@v2
+      if: ${{ !cancelled() }}
       with:
         name: Compliance Test Results
         path: '**/target/surefire-reports/TEST-*.xml'
         reporter: java-junit
-        fail-on-error: true
