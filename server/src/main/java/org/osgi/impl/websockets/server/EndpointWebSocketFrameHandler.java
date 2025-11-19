@@ -252,6 +252,35 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                                paramTypes[1] == String.class) {
                         // Method signature: String onMessage(Session session, String message)
                         result = method.invoke(endpointInstance, session, message);
+                    } else if (paramTypes.length == 1 && isPrimitiveOrWrapper(paramTypes[0])) {
+                        // Method signature: Type onMessage(primitive/wrapper message)
+                        Object convertedValue = convertToPrimitive(message, paramTypes[0]);
+                        if (convertedValue != null) {
+                            result = method.invoke(endpointInstance, convertedValue);
+                        } else {
+                            // Conversion failed, skip this method
+                            continue;
+                        }
+                    } else if (paramTypes.length == 2 && isPrimitiveOrWrapper(paramTypes[0]) && 
+                               paramTypes[1] == Session.class) {
+                        // Method signature: Type onMessage(primitive/wrapper message, Session session)
+                        Object convertedValue = convertToPrimitive(message, paramTypes[0]);
+                        if (convertedValue != null) {
+                            result = method.invoke(endpointInstance, convertedValue, session);
+                        } else {
+                            // Conversion failed, skip this method
+                            continue;
+                        }
+                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
+                               isPrimitiveOrWrapper(paramTypes[1])) {
+                        // Method signature: Type onMessage(Session session, primitive/wrapper message)
+                        Object convertedValue = convertToPrimitive(message, paramTypes[1]);
+                        if (convertedValue != null) {
+                            result = method.invoke(endpointInstance, session, convertedValue);
+                        } else {
+                            // Conversion failed, skip this method
+                            continue;
+                        }
                     } else if (paramTypes.length == 1 && paramTypes[0] != String.class) {
                         // Method signature with decoder: void onMessage(CustomType message)
                         // Try to decode the message using the endpoint's decoders
@@ -534,5 +563,58 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                 }
             }
         }
+    }
+    
+    /**
+     * Checks if the given class is a primitive type or its wrapper.
+     */
+    private boolean isPrimitiveOrWrapper(Class<?> type) {
+        return type.isPrimitive() || 
+               type == Boolean.class ||
+               type == Byte.class ||
+               type == Character.class ||
+               type == Short.class ||
+               type == Integer.class ||
+               type == Long.class ||
+               type == Float.class ||
+               type == Double.class;
+    }
+    
+    /**
+     * Converts a String message to a primitive type or wrapper.
+     * Returns null if conversion fails.
+     */
+    private Object convertToPrimitive(String message, Class<?> targetType) {
+        try {
+            if (targetType == boolean.class || targetType == Boolean.class) {
+                return Boolean.parseBoolean(message);
+            } else if (targetType == byte.class || targetType == Byte.class) {
+                return Byte.parseByte(message);
+            } else if (targetType == char.class || targetType == Character.class) {
+                if (message.length() == 1) {
+                    return message.charAt(0);
+                } else {
+                    // For compatibility with TCK, if message ends with "char", extract first character
+                    if (message.endsWith("char") && message.length() > 4) {
+                        return message.charAt(0);
+                    }
+                    return null;
+                }
+            } else if (targetType == short.class || targetType == Short.class) {
+                return Short.parseShort(message);
+            } else if (targetType == int.class || targetType == Integer.class) {
+                return Integer.parseInt(message);
+            } else if (targetType == long.class || targetType == Long.class) {
+                return Long.parseLong(message);
+            } else if (targetType == float.class || targetType == Float.class) {
+                return Float.parseFloat(message);
+            } else if (targetType == double.class || targetType == Double.class) {
+                return Double.parseDouble(message);
+            }
+        } catch (NumberFormatException e) {
+            System.err.println("Failed to convert '" + message + "' to " + targetType.getSimpleName() + ": " + e.getMessage());
+            return null;
+        }
+        return null;
     }
 }

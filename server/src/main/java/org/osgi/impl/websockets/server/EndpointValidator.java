@@ -142,8 +142,8 @@ public class EndpointValidator {
         Class<?>[] paramTypes = method.getParameterTypes();
         
         for (Class<?> paramType : paramTypes) {
-            // Check for text message types
-            if (paramType == String.class || paramType == Reader.class) {
+            // Check for text message types (String, Reader, or primitives)
+            if (paramType == String.class || paramType == Reader.class || isPrimitiveOrWrapper(paramType)) {
                 return MessageType.TEXT;
             }
             // Check for binary message types
@@ -222,28 +222,39 @@ public class EndpointValidator {
                 continue;
             }
             
-            // Check for boolean parameter (only valid as last parameter)
+            // Check for boolean parameter
+            // Boolean has two uses:
+            // 1. As a primitive message type (boolean alone or with Session)
+            // 2. As a "partial message" indicator when used with String/ByteBuffer/byte[] (must be last param)
             if (paramType == boolean.class || paramType == Boolean.class) {
-                if (!isLastParam) {
-                    throw new IllegalArgumentException(
-                        "boolean parameter in @OnMessage must be the last parameter: " + method.getName());
+                // Check if there's already another message parameter (String, ByteBuffer, etc.)
+                // If so, this boolean is the "partial message" indicator and must be last
+                if (hasMessageParam) {
+                    if (!isLastParam) {
+                        throw new IllegalArgumentException(
+                            "boolean parameter in @OnMessage must be the last parameter when used with another message type: " + method.getName());
+                    }
+                    
+                    // Pong messages cannot have boolean parameter
+                    if (hasPong) {
+                        throw new IllegalArgumentException(
+                            "@OnMessage method for PongMessage cannot have boolean parameter: " + method.getName());
+                    }
+                    
+                    // Reader and InputStream cannot have boolean as the "last" indicator 
+                    // (they have their own way of handling partial messages)
+                    if (hasReader || hasInputStream) {
+                        throw new IllegalArgumentException(
+                            "boolean parameter cannot be used with Reader or InputStream: " + method.getName());
+                    }
+                    
+                    hasBoolean = true;
+                    continue;
+                } else {
+                    // Boolean is being used as a primitive message type
+                    hasMessageParam = true;
+                    continue;
                 }
-                
-                // Pong messages cannot have boolean parameter
-                if (hasPong) {
-                    throw new IllegalArgumentException(
-                        "@OnMessage method for PongMessage cannot have boolean parameter: " + method.getName());
-                }
-                
-                // Reader and InputStream cannot have boolean as the "last" indicator 
-                // (they have their own way of handling partial messages)
-                if (hasReader || hasInputStream) {
-                    throw new IllegalArgumentException(
-                        "boolean parameter cannot be used with Reader or InputStream: " + method.getName());
-                }
-                
-                hasBoolean = true;
-                continue;
             }
             
             // Check for @PathParam parameters
@@ -263,28 +274,10 @@ public class EndpointValidator {
             }
             
             // If it's not a recognized type, check if it's a valid custom type with decoder
-            if (!hasMessageParam && !isPrimitiveOrWrapper(paramType)) {
+            if (!hasMessageParam) {
                 // Custom object type - would need decoder
                 // For now, we'll mark this as having a message param and check decoder availability later
                 hasMessageParam = true;
-                continue;
-            }
-            
-            // Check for invalid parameter combinations
-            if (paramType == int.class || paramType == Integer.class) {
-                // int is only valid with String as "String message, int lastFragment" pattern
-                // But if it's not the last param or there's no String, it's invalid
-                boolean hasStringParam = false;
-                for (Class<?> pt : paramTypes) {
-                    if (pt == String.class) {
-                        hasStringParam = true;
-                        break;
-                    }
-                }
-                if (!isLastParam || !hasStringParam) {
-                    throw new IllegalArgumentException(
-                        "int parameter in @OnMessage is only valid as last parameter with String message: " + method.getName());
-                }
                 continue;
             }
             

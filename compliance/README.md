@@ -270,10 +270,10 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - ✅ CloseReason API: 6/6 tests (testGetCode, testCloseCodeGetCode, testValueOf, testConstructor, testGetCloseCode, testValues)
   - ✅ ServerEndpointConfig API: 11/11 tests (testBasicBuilder, testSubprotocols, testEncoders, testDecoders, testBuilderWithMultipleConfigurations, testGetEndpointClass, testGetPath, testGetConfigurator, testCustomConfigurator, testCustomConfiguratorWithDefaults, testFullConfiguration)
   - ✅ Exception handling: 8/8 tests (DecodeException: 4 tests, EncodeException: 2 tests, DeploymentException: 2 tests)
-- [x] Task 2: Message Handling Tests - 15/40 ✅ **PARTIALLY COMPLETE**
+- [x] Task 2: Message Handling Tests - 40/40 ✅ **COMPLETE**
   - ✅ Text message handling: 8/8 tests (String, String+Session, Session+String, custom decoder, return values, void return, empty string, large message)
   - ✅ Binary message handling: 7/7 tests (ByteBuffer, byte[], ByteBuffer+Session, byte[]+Session, Session+ByteBuffer, large binary, empty binary)
-  - ⏸️ Primitive type conversion: 0/25 (requires server implementation - not yet supported)
+  - ✅ Primitive type conversion: 25/25 tests (boolean, byte, char, short, int, long, float, double - each with 3 parameter combinations, plus wrapper type test)
 - [x] Task 3: Encoder/Decoder Tests - 3/30 ✅ **PARTIALLY COMPLETE**
   - ✅ Text encoder/decoder: 3/3 tests (simple object, willDecode, multiple decoders)
   - ⏸️ Binary encoder/decoder: 0/2 (generic type resolution needs enhancement)
@@ -314,13 +314,13 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 75/280 tests (26.8%)**
+**Total Progress: 100/280 tests (35.7%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 76, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 101, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 All compliance tests passing! ✅ (Query string handshake issue FIXED)
@@ -331,6 +331,10 @@ All compliance tests passing! ✅ (Query string handshake issue FIXED)
 - **Exception APIs**: 8 tests - DecodeException, EncodeException, DeploymentException constructors
 - **Text Message Handling**: 8 tests - String messages, session parameters, custom decoders, return values
 - **Binary Message Handling**: 7 tests - ByteBuffer, byte[], session parameters, large/empty messages
+- **Primitive Type Conversion**: 25 tests - All primitive types and wrapper classes
+  - boolean, byte, char, short, int, long, float, double
+  - Each primitive tested with 3 parameter combinations: (primitive), (primitive, Session), (Session, primitive)
+  - Wrapper type validation (Integer)
 - **Encoder/Decoder**: 3 tests - Text encoder/decoder, willDecode, multiple decoders
 - **Session API**: 14 tests - Session lifecycle, configuration, information access, basic remote endpoint, user properties, query strings
   - getId(), isOpen(), close(), close(CloseReason)
