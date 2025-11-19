@@ -57,6 +57,27 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                 rawQueryString = requestPath.substring(queryStart + 1);
             }
             
+            // Now get the endpoint registration that was set by WebSocketPathHandler
+            JakartaWebSocketServer.EndpointRegistration registration = 
+                ctx.channel().attr(WebSocketPathHandler.ENDPOINT_REGISTRATION_KEY).get();
+            
+            if (registration == null) {
+                // No endpoint registered for this path - close connection with error
+                System.err.println("No endpoint registered for path: " + handshake.requestUri());
+                ctx.close();
+                return;
+            }
+            
+            // Extract path parameters from the request path using the URI template
+            String cleanPath = ctx.channel().attr(WebSocketPathHandler.REQUEST_PATH_KEY).get();
+            if (cleanPath == null) {
+                cleanPath = requestPath.contains("?") ? requestPath.substring(0, requestPath.indexOf("?")) : requestPath;
+            }
+            Map<String, String> pathParameters = registration.uriTemplate.extractParameters(cleanPath);
+            if (pathParameters == null) {
+                pathParameters = new java.util.HashMap<>();
+            }
+            
             // Construct a complete WebSocket URI including scheme and host
             // The request path is just the path + query (e.g., "/requesturi?param=value")
             // We need to construct a full URI with the WebSocket scheme
@@ -66,7 +87,7 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             }
             String fullUriString = "ws://" + host + requestPath;
             
-            // Create a Session for this connection with the full URI
+            // Create a Session for this connection with the full URI and path parameters
             java.net.URI requestUri;
             try {
                 requestUri = new java.net.URI(fullUriString);
@@ -78,19 +99,8 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                     requestUri = java.net.URI.create("ws://localhost/");
                 }
             }
-            NettyWebSocketSession session = new NettyWebSocketSession(ctx.channel(), requestUri, rawQueryString);
+            NettyWebSocketSession session = new NettyWebSocketSession(ctx.channel(), requestUri, rawQueryString, pathParameters);
             ctx.channel().attr(SESSION_KEY).set(session);
-            
-            // Now get the endpoint registration that was set by WebSocketPathHandler
-            JakartaWebSocketServer.EndpointRegistration registration = 
-                ctx.channel().attr(WebSocketPathHandler.ENDPOINT_REGISTRATION_KEY).get();
-            
-            if (registration == null) {
-                // No endpoint registered for this path - close connection with error
-                System.err.println("No endpoint registered for path: " + handshake.requestUri());
-                ctx.close();
-                return;
-            }
             
             // Set the endpoint codecs on the session
             session.setCodecs(registration.codecs);
@@ -226,108 +236,73 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
     private String invokeOnMessage(Object endpointInstance, String message, Session session) {
         Method[] methods = endpointInstance.getClass().getDeclaredMethods();
         
-        // Get the endpoint registration to access codecs
-        JakartaWebSocketServer.EndpointRegistration registration = null;
-        if (session instanceof NettyWebSocketSession) {
-            NettyWebSocketSession nettySession = (NettyWebSocketSession) session;
-            // The codecs are already set on the session
-        }
-        
         for (Method method : methods) {
             if (method.isAnnotationPresent(OnMessage.class)) {
                 try {
                     method.setAccessible(true);
                     Object result;
                     Class<?>[] paramTypes = method.getParameterTypes();
+                    java.lang.reflect.Parameter[] parameters = method.getParameters();
                     
-                    // Try different parameter combinations
-                    if (paramTypes.length == 1 && paramTypes[0] == String.class) {
-                        // Method signature: String onMessage(String message)
-                        result = method.invoke(endpointInstance, message);
-                    } else if (paramTypes.length == 2 && paramTypes[0] == String.class && 
-                               paramTypes[1] == Session.class) {
-                        // Method signature: String onMessage(String message, Session session)
-                        result = method.invoke(endpointInstance, message, session);
-                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
-                               paramTypes[1] == String.class) {
-                        // Method signature: String onMessage(Session session, String message)
-                        result = method.invoke(endpointInstance, session, message);
-                    } else if (paramTypes.length == 1 && isPrimitiveOrWrapper(paramTypes[0])) {
-                        // Method signature: Type onMessage(primitive/wrapper message)
-                        Object convertedValue = convertToPrimitive(message, paramTypes[0]);
-                        if (convertedValue != null) {
-                            result = method.invoke(endpointInstance, convertedValue);
+                    // Build argument list based on parameter types and annotations
+                    Object[] args = new Object[paramTypes.length];
+                    boolean validMethod = true;
+                    boolean hasMessageParam = false;
+                    
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        if (!hasMessageParam && paramTypes[i] == String.class && !parameters[i].isAnnotationPresent(jakarta.websocket.server.PathParam.class)) {
+                            // String message parameter
+                            args[i] = message;
+                            hasMessageParam = true;
+                        } else if (!hasMessageParam && isPrimitiveOrWrapper(paramTypes[i]) && !parameters[i].isAnnotationPresent(jakarta.websocket.server.PathParam.class)) {
+                            // Primitive message parameter
+                            args[i] = convertToPrimitive(message, paramTypes[i]);
+                            if (args[i] == null) {
+                                validMethod = false;
+                                break;
+                            }
+                            hasMessageParam = true;
+                        } else if (!hasMessageParam && paramTypes[i] != Session.class && !parameters[i].isAnnotationPresent(jakarta.websocket.server.PathParam.class)) {
+                            // Custom type with decoder
+                            args[i] = tryDecodeTextMessage(message, paramTypes[i], session);
+                            if (args[i] == null) {
+                                validMethod = false;
+                                break;
+                            }
+                            hasMessageParam = true;
+                        } else if (paramTypes[i] == Session.class) {
+                            args[i] = session;
+                        } else if (parameters[i].isAnnotationPresent(jakarta.websocket.server.PathParam.class)) {
+                            // Handle @PathParam annotation
+                            jakarta.websocket.server.PathParam pathParam = parameters[i].getAnnotation(jakarta.websocket.server.PathParam.class);
+                            String paramName = pathParam.value();
+                            String paramValue = session.getPathParameters().get(paramName);
+                            args[i] = convertPathParam(paramValue, paramTypes[i]);
                         } else {
-                            // Conversion failed, skip this method
-                            continue;
+                            // Unsupported parameter
+                            validMethod = false;
+                            break;
                         }
-                    } else if (paramTypes.length == 2 && isPrimitiveOrWrapper(paramTypes[0]) && 
-                               paramTypes[1] == Session.class) {
-                        // Method signature: Type onMessage(primitive/wrapper message, Session session)
-                        Object convertedValue = convertToPrimitive(message, paramTypes[0]);
-                        if (convertedValue != null) {
-                            result = method.invoke(endpointInstance, convertedValue, session);
-                        } else {
-                            // Conversion failed, skip this method
-                            continue;
-                        }
-                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
-                               isPrimitiveOrWrapper(paramTypes[1])) {
-                        // Method signature: Type onMessage(Session session, primitive/wrapper message)
-                        Object convertedValue = convertToPrimitive(message, paramTypes[1]);
-                        if (convertedValue != null) {
-                            result = method.invoke(endpointInstance, session, convertedValue);
-                        } else {
-                            // Conversion failed, skip this method
-                            continue;
-                        }
-                    } else if (paramTypes.length == 1 && paramTypes[0] != String.class) {
-                        // Method signature with decoder: void onMessage(CustomType message)
-                        // Try to decode the message using the endpoint's decoders
-                        Object decodedMessage = tryDecodeTextMessage(message, paramTypes[0], session);
-                        if (decodedMessage != null) {
-                            result = method.invoke(endpointInstance, decodedMessage);
-                        } else {
-                            // No decoder found, skip this method
-                            continue;
-                        }
-                    } else if (paramTypes.length == 2 && paramTypes[0] != String.class && 
-                               paramTypes[1] == Session.class) {
-                        // Method signature with decoder: void onMessage(CustomType message, Session session)
-                        Object decodedMessage = tryDecodeTextMessage(message, paramTypes[0], session);
-                        if (decodedMessage != null) {
-                            result = method.invoke(endpointInstance, decodedMessage, session);
-                        } else {
-                            // No decoder found, skip this method
-                            continue;
-                        }
-                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
-                               paramTypes[1] != String.class) {
-                        // Method signature with decoder: void onMessage(Session session, CustomType message)
-                        Object decodedMessage = tryDecodeTextMessage(message, paramTypes[1], session);
-                        if (decodedMessage != null) {
-                            result = method.invoke(endpointInstance, session, decodedMessage);
-                        } else {
-                            // No decoder found, skip this method
-                            continue;
-                        }
-                    } else {
-                        // Skip methods with unsupported signatures
-                        continue;
                     }
                     
-                    return result != null ? result.toString() : null;
+                    // @OnMessage must have a message parameter
+                    if (validMethod && hasMessageParam) {
+                        result = method.invoke(endpointInstance, args);
+                        if (result != null) {
+                            return result.toString();
+                        }
+                        return null;
+                    }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnMessage: " + e.getMessage());
-                    e.printStackTrace();
-                } catch (Exception e) {
-                    System.err.println("Error processing @OnMessage: " + e.getMessage());
                     e.printStackTrace();
                 }
             }
         }
         return null;
     }
+    
+
     
     /**
      * Tries to decode a text message to the target type using registered decoders.
@@ -480,17 +455,34 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                 try {
                     method.setAccessible(true);
                     Class<?>[] paramTypes = method.getParameterTypes();
+                    java.lang.reflect.Parameter[] parameters = method.getParameters();
                     
-                    // Try different parameter combinations
-                    if (paramTypes.length == 0) {
-                        // Method signature: void onOpen()
-                        method.invoke(endpointInstance);
-                    } else if (paramTypes.length == 1 && paramTypes[0] == Session.class) {
-                        // Method signature: void onOpen(Session session)
-                        method.invoke(endpointInstance, session);
-                    } else {
-                        // Skip methods with unsupported signatures
-                        continue;
+                    // Build argument list based on parameter types and annotations
+                    Object[] args = new Object[paramTypes.length];
+                    boolean validMethod = true;
+                    
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        if (paramTypes[i] == Session.class) {
+                            args[i] = session;
+                        } else if (parameters[i].isAnnotationPresent(jakarta.websocket.server.PathParam.class)) {
+                            // Handle @PathParam annotation
+                            jakarta.websocket.server.PathParam pathParam = parameters[i].getAnnotation(jakarta.websocket.server.PathParam.class);
+                            String paramName = pathParam.value();
+                            String paramValue = session.getPathParameters().get(paramName);
+                            args[i] = convertPathParam(paramValue, paramTypes[i]);
+                        } else if (paramTypes[i] == jakarta.websocket.EndpointConfig.class) {
+                            // EndpointConfig - not yet supported, pass null
+                            args[i] = null;
+                        } else {
+                            // Unsupported parameter type
+                            validMethod = false;
+                            break;
+                        }
+                    }
+                    
+                    if (validMethod) {
+                        method.invoke(endpointInstance, args);
+                        return; // Successfully invoked
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnOpen: " + e.getMessage());
@@ -510,17 +502,34 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                 try {
                     method.setAccessible(true);
                     Class<?>[] paramTypes = method.getParameterTypes();
+                    java.lang.reflect.Parameter[] parameters = method.getParameters();
                     
-                    // Try different parameter combinations
-                    if (paramTypes.length == 0) {
-                        // Method signature: void onClose()
-                        method.invoke(endpointInstance);
-                    } else if (paramTypes.length == 1 && paramTypes[0] == Session.class) {
-                        // Method signature: void onClose(Session session)
-                        method.invoke(endpointInstance, session);
-                    } else {
-                        // Skip methods with unsupported signatures
-                        continue;
+                    // Build argument list based on parameter types and annotations
+                    Object[] args = new Object[paramTypes.length];
+                    boolean validMethod = true;
+                    
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        if (paramTypes[i] == Session.class) {
+                            args[i] = session;
+                        } else if (paramTypes[i] == jakarta.websocket.CloseReason.class) {
+                            // CloseReason - not provided in this context, pass null
+                            args[i] = null;
+                        } else if (parameters[i].isAnnotationPresent(jakarta.websocket.server.PathParam.class)) {
+                            // Handle @PathParam annotation
+                            jakarta.websocket.server.PathParam pathParam = parameters[i].getAnnotation(jakarta.websocket.server.PathParam.class);
+                            String paramName = pathParam.value();
+                            String paramValue = session.getPathParameters().get(paramName);
+                            args[i] = convertPathParam(paramValue, paramTypes[i]);
+                        } else {
+                            // Unsupported parameter type
+                            validMethod = false;
+                            break;
+                        }
+                    }
+                    
+                    if (validMethod) {
+                        method.invoke(endpointInstance, args);
+                        return; // Successfully invoked
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnClose: " + e.getMessage());
@@ -540,22 +549,36 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                 try {
                     method.setAccessible(true);
                     Class<?>[] paramTypes = method.getParameterTypes();
+                    java.lang.reflect.Parameter[] parameters = method.getParameters();
                     
-                    // Try different parameter combinations
-                    if (paramTypes.length == 1 && paramTypes[0].isAssignableFrom(Throwable.class)) {
-                        // Method signature: void onError(Throwable throwable)
-                        method.invoke(endpointInstance, cause);
-                    } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
-                               paramTypes[1].isAssignableFrom(Throwable.class)) {
-                        // Method signature: void onError(Session session, Throwable throwable)
-                        method.invoke(endpointInstance, session, cause);
-                    } else if (paramTypes.length == 2 && paramTypes[0].isAssignableFrom(Throwable.class) && 
-                               paramTypes[1] == Session.class) {
-                        // Method signature: void onError(Throwable throwable, Session session)
-                        method.invoke(endpointInstance, cause, session);
-                    } else {
-                        // Skip methods with unsupported signatures
-                        continue;
+                    // Build argument list based on parameter types and annotations
+                    Object[] args = new Object[paramTypes.length];
+                    boolean validMethod = true;
+                    boolean hasThrowable = false;
+                    
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        if (paramTypes[i].isAssignableFrom(Throwable.class)) {
+                            args[i] = cause;
+                            hasThrowable = true;
+                        } else if (paramTypes[i] == Session.class) {
+                            args[i] = session;
+                        } else if (parameters[i].isAnnotationPresent(jakarta.websocket.server.PathParam.class)) {
+                            // Handle @PathParam annotation
+                            jakarta.websocket.server.PathParam pathParam = parameters[i].getAnnotation(jakarta.websocket.server.PathParam.class);
+                            String paramName = pathParam.value();
+                            String paramValue = session.getPathParameters().get(paramName);
+                            args[i] = convertPathParam(paramValue, paramTypes[i]);
+                        } else {
+                            // Unsupported parameter type
+                            validMethod = false;
+                            break;
+                        }
+                    }
+                    
+                    // @OnError must have a Throwable parameter
+                    if (validMethod && hasThrowable) {
+                        method.invoke(endpointInstance, args);
+                        return; // Successfully invoked
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     System.err.println("Failed to invoke @OnError: " + e.getMessage());
@@ -616,5 +639,23 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             return null;
         }
         return null;
+    }
+    
+    /**
+     * Converts a path parameter value to the target type.
+     * Supports String and all primitive types and their wrappers.
+     */
+    private Object convertPathParam(String value, Class<?> targetType) {
+        if (value == null) {
+            return null;
+        }
+        
+        // String type - no conversion needed
+        if (targetType == String.class) {
+            return value;
+        }
+        
+        // Use the same conversion logic as convertToPrimitive
+        return convertToPrimitive(value, targetType);
     }
 }
