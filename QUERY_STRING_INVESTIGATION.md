@@ -169,23 +169,66 @@ Tests demonstrate the Netty pipeline issue.
 
 ## Recommendations
 
+### Root Cause: Netty Pipeline Handler Order
+
+The fundamental issue is that `WebSocketServerProtocolHandler` must be in the pipeline BEFORE receiving the HTTP Upgrade request. Our architecture tries to add it dynamically AFTER receiving the request, which doesn't work.
+
+**Why dynamic addition fails:**
+1. `FullHttpRequest` arrives at `WebSocketPathHandler`
+2. We try to add `WebSocketServerProtocolHandler` to the pipeline
+3. We forward the request with `ctx.fireChannelRead(msg)`
+4. But the newly added handler isn't properly initialized to process an already-received message
+5. Result: Handshake never completes
+
 ### Immediate Fix Options
 
-#### Option 1: Custom WebSocket Handshake Handler
-Implement a custom Netty handler that performs WebSocket handshaking without relying on WebSocketServerProtocolHandler's path matching.
+#### Option 1: Static Handler with Query String Support ✅ RECOMMENDED
+Add `WebSocketServerProtocolHandler` statically during pipeline initialization with a configuration that supports query strings.
 
-#### Option 2: Static Handler with Custom Routing
-Add WebSocketServerProtocolHandler statically with a wildcard or root path, then handle all routing logic in application code.
+```java
+// In JakartaWebSocketServer.initChannel()
+pipeline.addLast(new HttpServerCodec());
+pipeline.addLast(new HttpObjectAggregator(65536));
+pipeline.addLast(new WebSocketPathHandler(server));
 
-#### Option 3: Alternative WebSocket Library
-Consider using a different Netty-based WebSocket library that better supports dynamic routing with query strings.
+// Use WebSocketServerProtocolConfig for better control
+WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+    .websocketPath("/")  // Accept all paths
+    .checkStartsWith(true)  // Allow subpaths
+    .allowExtensions(true)
+    .build();
+pipeline.addLast(new WebSocketServerProtocolHandler(config));
+
+pipeline.addLast(new EndpointWebSocketFrameHandler(server));
+```
+
+Then handle path validation in `EndpointWebSocketFrameHandler` based on the stored endpoint registration.
+
+#### Option 2: Custom WebSocket Handshake Handler
+Implement a custom Netty handler that performs WebSocket handshaking using Netty's lower-level WebSocket APIs:
+- `WebSocketServerHandshakerFactory`
+- Manual handshake processing
+- Full control over URI parsing including query strings
+
+**Pros**: Complete control, guaranteed to work with query strings
+**Cons**: More complex, need to reimplement handshake logic
+
+#### Option 3: Alternative WebSocket Server Library
+Use a different server implementation:
+- **Jetty WebSocket**: Has built-in support for query parameters
+- **Undertow**: Supports WebSocket with query strings out of the box
+- **Spring WebSocket**: Higher-level API with query string support
+
+**Pros**: Proven implementations, better documentation
+**Cons**: Major architectural change, different dependencies
 
 ### Long-term Solution
 
-1. **Refactor pipeline setup**: Add handlers in correct order during initialization
-2. **Implement proper handshake**: Handle WebSocket upgrade manually if needed
+1. **Refactor pipeline setup**: Use static handler with proper configuration
+2. **Implement custom path validation**: Check endpoint registration in userEventTriggered
 3. **Add comprehensive tests**: Test various query string scenarios
-4. **Document limitations**: Clearly document any query string limitations
+4. **Document behavior**: Clearly document query string support and limitations
+5. **Consider migration**: Evaluate moving to a more mature WebSocket server library
 
 ## Next Steps for Investigation
 
