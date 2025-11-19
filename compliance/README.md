@@ -281,13 +281,14 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - ⏸️ Stream encoders/decoders: 0/10 (not implemented yet)
   - ⏸️ Error handling: 0/5 (not implemented yet)
   - ⏸️ Additional encoder/decoder tests: 0/8 (pending)
-- [x] Task 4: Session API Tests - 10/25 ✅ **PARTIALLY COMPLETE**
+- [x] Task 4: Session API Tests - 14/25 ✅ **PARTIALLY COMPLETE**
   - ✅ Session lifecycle: 4/4 tests (isOpen, getId, close, close with reason)
   - ✅ Session configuration: 3/3 tests (maxIdleTimeout, maxBinaryBufferSize, maxTextBufferSize)
-  - ✅ Session information: 2/2 tests (getRequestURI, getProtocolVersion)
+  - ✅ Session information: 2/2 tests (getRequestURI, getProtocolVersion) ✅
   - ✅ Basic remote endpoint: 1/1 test (getBasicRemote)
-  - ⏸️ Query string and user properties: 0/2 tests (investigating timeout issues)
-  - ⏸️ Advanced session features: 0/13 tests (message handlers, path parameters, etc.)
+  - ✅ User properties: 1/1 test (getUserProperties) ✅
+  - ✅ Query string: 3/3 tests (getQueryString, getQueryStringNull, getRequestURI with query params) ✅ **FIXED**
+  - ⏸️ Advanced session features: 0/11 tests (message handlers, path parameters, etc.)
 - [ ] Task 5: Annotation Handler Tests - 0/15
 
 ### Phase 2: Negative Validation Tests
@@ -313,16 +314,16 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 71/280 tests (25.4%)**
+**Total Progress: 75/280 tests (26.8%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 73, Failures: 0, Errors: 0, Skipped: 3
+Tests run: 76, Failures: 0, Errors: 0, Skipped: 0
 ```
 
-All active compliance tests passing! ✅ (3 tests temporarily disabled for investigation)
+All compliance tests passing! ✅ (Query string handshake issue FIXED)
 
 ### Test Coverage Summary
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
@@ -331,11 +332,13 @@ All active compliance tests passing! ✅ (3 tests temporarily disabled for inves
 - **Text Message Handling**: 8 tests - String messages, session parameters, custom decoders, return values
 - **Binary Message Handling**: 7 tests - ByteBuffer, byte[], session parameters, large/empty messages
 - **Encoder/Decoder**: 3 tests - Text encoder/decoder, willDecode, multiple decoders
-- **Session API**: 10 tests - Session lifecycle, configuration, information access, basic remote endpoint
+- **Session API**: 14 tests - Session lifecycle, configuration, information access, basic remote endpoint, user properties, query strings
   - getId(), isOpen(), close(), close(CloseReason)
   - getRequestURI(), getProtocolVersion()
   - setMaxIdleTimeout(), setMaxBinaryMessageBufferSize(), setMaxTextMessageBufferSize()
   - getBasicRemote()
+  - getUserProperties()
+  - getQueryString() (with and without query parameters, including URL-encoded values)
 - **Negative Validation**: 18 tests - Invalid endpoint annotations and configurations
   - Duplicate annotation handlers (@OnMessage, @OnOpen, @OnClose, @OnError)
   - Invalid @OnMessage parameters (int, boolean position, PongMessage combinations)

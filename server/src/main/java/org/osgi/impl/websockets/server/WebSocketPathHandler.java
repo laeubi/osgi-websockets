@@ -3,7 +3,6 @@ package org.osgi.impl.websockets.server;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.util.AttributeKey;
 
 /**
@@ -39,19 +38,9 @@ public class WebSocketPathHandler extends ChannelInboundHandlerAdapter {
             JakartaWebSocketServer.EndpointRegistration registration = server.getEndpointRegistration(path);
             if (registration != null) {
                 ctx.channel().attr(ENDPOINT_REGISTRATION_KEY).set(registration);
-            }
-            
-            // Add WebSocket protocol handler for this specific path
-            // Use checkStartsWith=true to allow any subpaths under this endpoint
-            try {
-                System.out.println("WebSocketPathHandler: Adding handler for path=" + path + ", uri=" + uri);
-                ctx.pipeline().addBefore(ctx.pipeline().context(EndpointWebSocketFrameHandler.class).name(),
-                    "wsProtocolHandler", 
-                    new WebSocketServerProtocolHandler(path, null, true));
-                System.out.println("WebSocketPathHandler: Handler added successfully");
-            } catch (Exception e) {
-                System.err.println("WebSocketPathHandler: Failed to add handler: " + e.getMessage());
-                e.printStackTrace();
+                System.out.println("WebSocketPathHandler: Found endpoint for path=" + path + ", uri=" + uri);
+            } else {
+                System.out.println("WebSocketPathHandler: No endpoint registered for path=" + path + ", uri=" + uri);
             }
         }
         

@@ -33,6 +33,7 @@ public class NettyWebSocketSession implements Session {
     private final String id;
     private final Channel channel;
     private final URI requestUri;
+    private final String rawQueryString; // Raw query string from request URI (URL-encoded)
     private final Map<String, String> pathParameters;
     private final Map<String, List<String>> requestParameterMap;
     private final Map<String, Object> userProperties;
@@ -46,9 +47,14 @@ public class NettyWebSocketSession implements Session {
     private int maxTextMessageBufferSize = 8192;
     
     public NettyWebSocketSession(Channel channel, URI requestUri) {
+        this(channel, requestUri, null);
+    }
+    
+    public NettyWebSocketSession(Channel channel, URI requestUri, String rawQueryString) {
         this.id = UUID.randomUUID().toString();
         this.channel = channel;
         this.requestUri = requestUri;
+        this.rawQueryString = rawQueryString;
         this.pathParameters = new HashMap<>();
         this.requestParameterMap = new HashMap<>();
         this.userProperties = new ConcurrentHashMap<>();
@@ -200,7 +206,9 @@ public class NettyWebSocketSession implements Session {
     
     @Override
     public String getQueryString() {
-        return requestUri.getQuery();
+        // Return the raw query string if available (preserves URL encoding)
+        // Otherwise fall back to the decoded version from URI.getQuery()
+        return rawQueryString != null ? rawQueryString : requestUri.getQuery();
     }
     
     @Override
