@@ -13,6 +13,7 @@ import io.netty.util.AttributeKey;
 public class WebSocketPathHandler extends ChannelInboundHandlerAdapter {
     
     static final AttributeKey<String> REQUEST_PATH_KEY = AttributeKey.valueOf("request_path");
+    static final AttributeKey<String> REQUEST_URI_KEY = AttributeKey.valueOf("request_uri");
     static final AttributeKey<JakartaWebSocketServer.EndpointRegistration> ENDPOINT_REGISTRATION_KEY = 
         AttributeKey.valueOf("endpoint_registration");
     
@@ -26,8 +27,11 @@ public class WebSocketPathHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             FullHttpRequest request = (FullHttpRequest) msg;
-            // Store the request path for later use
+            // Store the full request URI (including query string) for later use
             String uri = request.uri();
+            ctx.channel().attr(REQUEST_URI_KEY).set(uri);
+            
+            // Extract path component (without query string) for endpoint matching
             String path = uri.contains("?") ? uri.substring(0, uri.indexOf("?")) : uri;
             ctx.channel().attr(REQUEST_PATH_KEY).set(path);
             
@@ -38,8 +42,17 @@ public class WebSocketPathHandler extends ChannelInboundHandlerAdapter {
             }
             
             // Add WebSocket protocol handler for this specific path
-            ctx.pipeline().addAfter(ctx.name(), "wsProtocolHandler", 
-                new WebSocketServerProtocolHandler(path, null, true));
+            // Use checkStartsWith=true to allow any subpaths under this endpoint
+            try {
+                System.out.println("WebSocketPathHandler: Adding handler for path=" + path + ", uri=" + uri);
+                ctx.pipeline().addBefore(ctx.pipeline().context(EndpointWebSocketFrameHandler.class).name(),
+                    "wsProtocolHandler", 
+                    new WebSocketServerProtocolHandler(path, null, true));
+                System.out.println("WebSocketPathHandler: Handler added successfully");
+            } catch (Exception e) {
+                System.err.println("WebSocketPathHandler: Failed to add handler: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
         
         // Pass the message forward
