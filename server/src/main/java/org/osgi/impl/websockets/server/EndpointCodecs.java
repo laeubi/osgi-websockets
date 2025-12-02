@@ -138,6 +138,20 @@ public class EndpointCodecs {
             return textEncoder.encode(obj);
         }
         
+        // Try TextStream encoder
+        if (encoder instanceof Encoder.TextStream) {
+            @SuppressWarnings("unchecked")
+            Encoder.TextStream<Object> textStreamEncoder = (Encoder.TextStream<Object>) encoder;
+            java.io.StringWriter writer = new java.io.StringWriter();
+            try {
+                textStreamEncoder.encode(obj, writer);
+                return writer.toString();
+            } catch (java.io.IOException e) {
+                throw new jakarta.websocket.EncodeException(obj, 
+                    "TextStream encoder failed: " + e.getMessage(), e);
+            }
+        }
+        
         // Try all text encoders
         for (Encoder enc : encoders) {
             if (enc instanceof Encoder.Text) {
@@ -145,6 +159,21 @@ public class EndpointCodecs {
                 Encoder.Text<Object> textEncoder = (Encoder.Text<Object>) enc;
                 try {
                     return textEncoder.encode(obj);
+                } catch (Exception e) {
+                    // Try next encoder
+                }
+            }
+        }
+        
+        // Try all TextStream encoders
+        for (Encoder enc : encoders) {
+            if (enc instanceof Encoder.TextStream) {
+                @SuppressWarnings("unchecked")
+                Encoder.TextStream<Object> textStreamEncoder = (Encoder.TextStream<Object>) enc;
+                java.io.StringWriter writer = new java.io.StringWriter();
+                try {
+                    textStreamEncoder.encode(obj, writer);
+                    return writer.toString();
                 } catch (Exception e) {
                     // Try next encoder
                 }
@@ -175,6 +204,20 @@ public class EndpointCodecs {
             return binaryEncoder.encode(obj);
         }
         
+        // Try BinaryStream encoder
+        if (encoder instanceof Encoder.BinaryStream) {
+            @SuppressWarnings("unchecked")
+            Encoder.BinaryStream<Object> binaryStreamEncoder = (Encoder.BinaryStream<Object>) encoder;
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            try {
+                binaryStreamEncoder.encode(obj, baos);
+                return java.nio.ByteBuffer.wrap(baos.toByteArray());
+            } catch (java.io.IOException e) {
+                throw new jakarta.websocket.EncodeException(obj, 
+                    "BinaryStream encoder failed: " + e.getMessage(), e);
+            }
+        }
+        
         // Try all binary encoders
         for (Encoder enc : encoders) {
             if (enc instanceof Encoder.Binary) {
@@ -182,6 +225,21 @@ public class EndpointCodecs {
                 Encoder.Binary<Object> binaryEncoder = (Encoder.Binary<Object>) enc;
                 try {
                     return binaryEncoder.encode(obj);
+                } catch (Exception e) {
+                    // Try next encoder
+                }
+            }
+        }
+        
+        // Try all BinaryStream encoders
+        for (Encoder enc : encoders) {
+            if (enc instanceof Encoder.BinaryStream) {
+                @SuppressWarnings("unchecked")
+                Encoder.BinaryStream<Object> binaryStreamEncoder = (Encoder.BinaryStream<Object>) enc;
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                try {
+                    binaryStreamEncoder.encode(obj, baos);
+                    return java.nio.ByteBuffer.wrap(baos.toByteArray());
                 } catch (Exception e) {
                     // Try next encoder
                 }
@@ -212,6 +270,19 @@ public class EndpointCodecs {
             }
         }
         
+        // Try TextStream decoder
+        if (decoder instanceof Decoder.TextStream) {
+            @SuppressWarnings("unchecked")
+            Decoder.TextStream<T> textStreamDecoder = (Decoder.TextStream<T>) decoder;
+            java.io.StringReader reader = new java.io.StringReader(message);
+            try {
+                return textStreamDecoder.decode(reader);
+            } catch (java.io.IOException e) {
+                throw new jakarta.websocket.DecodeException(message, 
+                    "TextStream decoder failed: " + e.getMessage(), e);
+            }
+        }
+        
         // Try all text decoders
         for (Decoder dec : decoders) {
             if (dec instanceof Decoder.Text) {
@@ -221,6 +292,20 @@ public class EndpointCodecs {
                     if (textDecoder.willDecode(message)) {
                         return textDecoder.decode(message);
                     }
+                } catch (Exception e) {
+                    // Try next decoder
+                }
+            }
+        }
+        
+        // Try all TextStream decoders
+        for (Decoder dec : decoders) {
+            if (dec instanceof Decoder.TextStream) {
+                @SuppressWarnings("unchecked")
+                Decoder.TextStream<T> textStreamDecoder = (Decoder.TextStream<T>) dec;
+                java.io.StringReader reader = new java.io.StringReader(message);
+                try {
+                    return textStreamDecoder.decode(reader);
                 } catch (Exception e) {
                     // Try next decoder
                 }
@@ -251,6 +336,22 @@ public class EndpointCodecs {
             }
         }
         
+        // Try BinaryStream decoder
+        if (decoder instanceof Decoder.BinaryStream) {
+            @SuppressWarnings("unchecked")
+            Decoder.BinaryStream<T> binaryStreamDecoder = (Decoder.BinaryStream<T>) decoder;
+            byte[] bytes = new byte[data.remaining()];
+            data.get(bytes);
+            data.rewind(); // Reset for potential retry
+            java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(bytes);
+            try {
+                return binaryStreamDecoder.decode(bais);
+            } catch (java.io.IOException e) {
+                throw new jakarta.websocket.DecodeException(data, 
+                    "BinaryStream decoder failed: " + e.getMessage(), e);
+            }
+        }
+        
         // Try all binary decoders
         for (Decoder dec : decoders) {
             if (dec instanceof Decoder.Binary) {
@@ -268,6 +369,22 @@ public class EndpointCodecs {
             }
         }
         
+        // Try all BinaryStream decoders
+        for (Decoder dec : decoders) {
+            if (dec instanceof Decoder.BinaryStream) {
+                @SuppressWarnings("unchecked")
+                Decoder.BinaryStream<T> binaryStreamDecoder = (Decoder.BinaryStream<T>) dec;
+                byte[] bytes = new byte[data.remaining()];
+                data.duplicate().get(bytes); // Use duplicate to preserve position
+                java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(bytes);
+                try {
+                    return binaryStreamDecoder.decode(bais);
+                } catch (Exception e) {
+                    // Try next decoder
+                }
+            }
+        }
+        
         return null; // No decoder found
     }
     
@@ -276,12 +393,12 @@ public class EndpointCodecs {
      */
     public boolean hasTextEncoder(Class<?> type) {
         Encoder encoder = encoderByType.get(type);
-        if (encoder instanceof Encoder.Text) {
+        if (encoder instanceof Encoder.Text || encoder instanceof Encoder.TextStream) {
             return true;
         }
         // Check all encoders
         for (Encoder enc : encoders) {
-            if (enc instanceof Encoder.Text) {
+            if (enc instanceof Encoder.Text || enc instanceof Encoder.TextStream) {
                 return true;
             }
         }
@@ -293,12 +410,12 @@ public class EndpointCodecs {
      */
     public boolean hasBinaryEncoder(Class<?> type) {
         Encoder encoder = encoderByType.get(type);
-        if (encoder instanceof Encoder.Binary) {
+        if (encoder instanceof Encoder.Binary || encoder instanceof Encoder.BinaryStream) {
             return true;
         }
         // Check all encoders
         for (Encoder enc : encoders) {
-            if (enc instanceof Encoder.Binary) {
+            if (enc instanceof Encoder.Binary || enc instanceof Encoder.BinaryStream) {
                 return true;
             }
         }
