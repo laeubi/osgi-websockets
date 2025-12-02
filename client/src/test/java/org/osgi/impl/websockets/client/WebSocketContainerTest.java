@@ -159,9 +159,6 @@ public class WebSocketContainerTest {
             assertNotNull(session);
             assertTrue(session.isOpen());
             
-            // Wait a bit for connection to stabilize
-            Thread.sleep(100);
-            
             // Close session
             session.close();
             
@@ -253,16 +250,12 @@ public class WebSocketContainerTest {
         // Set a very short timeout
         container.setConnectToServerTimeout(100);
         
-        // Try to connect to a non-existent server
-        try {
+        // Try to connect to a non-existent server - should fail with IOException
+        assertThrows(IOException.class, () -> {
             container.connectToServer(
                 SimpleClientEndpoint.class, 
                 new URI("ws://localhost:59999/nonexistent"));
-            fail("Should have thrown exception");
-        } catch (IOException e) {
-            // Expected - connection should timeout or fail
-            assertTrue(true);
-        }
+        });
     }
     
     @Test

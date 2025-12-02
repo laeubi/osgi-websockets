@@ -92,15 +92,22 @@ public class ClientEndpointHandler implements WebSocket.Listener {
     
     @Override
     public CompletionStage<?> onBinary(WebSocket webSocket, ByteBuffer data, boolean last) {
+        int dataSize = data.remaining();
         if (binaryMessageBuffer == null) {
-            binaryMessageBuffer = ByteBuffer.allocate(data.remaining());
-        } else {
-            // Expand buffer if needed
-            ByteBuffer newBuffer = ByteBuffer.allocate(binaryMessageBuffer.position() + data.remaining());
+            // Allocate initial buffer with some extra capacity
+            binaryMessageBuffer = ByteBuffer.allocate(Math.max(dataSize, 1024));
+        }
+        
+        // Check if we need to expand the buffer
+        if (binaryMessageBuffer.remaining() < dataSize) {
+            // Expand buffer to accommodate new data
+            int newSize = binaryMessageBuffer.position() + dataSize;
+            ByteBuffer newBuffer = ByteBuffer.allocate(newSize);
             binaryMessageBuffer.flip();
             newBuffer.put(binaryMessageBuffer);
             binaryMessageBuffer = newBuffer;
         }
+        
         binaryMessageBuffer.put(data);
         
         if (last) {
@@ -150,25 +157,28 @@ public class ClientEndpointHandler implements WebSocket.Listener {
                     
                     // Check if this method handles text messages
                     boolean isTextHandler = false;
+                    boolean isBinaryHandler = false;
+                    
                     for (Class<?> paramType : paramTypes) {
                         if (paramType == String.class || 
                             paramType == java.io.Reader.class ||
                             isPrimitiveOrWrapper(paramType)) {
                             isTextHandler = true;
-                            break;
+                        }
+                        if (paramType == ByteBuffer.class || 
+                            paramType == byte[].class ||
+                            paramType == java.io.InputStream.class) {
+                            isBinaryHandler = true;
                         }
                     }
                     
                     // Skip binary handlers
-                    if (!isTextHandler) {
-                        for (Class<?> paramType : paramTypes) {
-                            if (paramType == ByteBuffer.class || 
-                                paramType == byte[].class ||
-                                paramType == java.io.InputStream.class) {
-                                continue; // Skip to next method
-                            }
-                        }
-                        // If not binary, assume custom type decoder - treat as text
+                    if (isBinaryHandler) {
+                        continue; // Skip to next method
+                    }
+                    
+                    // If no explicit text parameters but also not binary, assume custom type decoder - treat as text
+                    if (!isTextHandler && !isBinaryHandler) {
                         isTextHandler = true;
                     }
                     
