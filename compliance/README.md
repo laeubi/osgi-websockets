@@ -81,8 +81,12 @@ Based on our current implementation (server module with 23 passing tests):
 - `@ClientEndpoint` annotation
 - `WebSocketContainer.connectToServer()` method
 - Client-side `@OnOpen`, `@OnMessage`, `@OnClose`, `@OnError` handlers
-- Client encoders/decoders
+- Client encoders/decoders (Text and Binary types)
 - Client Session and RemoteEndpoint APIs
+
+**Note**: Client encoder/decoder support has similar limitations to the server:
+- Generic type resolution for complex inheritance hierarchies may have limitations
+- Streaming encoders/decoders are supported but with buffer-based implementation
 
 ## Client TCK Tests
 
