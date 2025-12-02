@@ -77,10 +77,38 @@ Based on our current implementation (server module with 23 passing tests):
 - Pong frame handling
 - SSL/TLS support
 
-### 🚫 Out of Scope (Client Features)
+### ✅ Now Supported (Client Module)
 - `@ClientEndpoint` annotation
-- ClientEndpointConfig
-- WebSocketContainer.connectToServer() method
+- `WebSocketContainer.connectToServer()` method
+- Client-side `@OnOpen`, `@OnMessage`, `@OnClose`, `@OnError` handlers
+- Client encoders/decoders
+- Client Session and RemoteEndpoint APIs
+
+## Client TCK Tests
+
+The client module implements the `jakarta.websocket.WebSocketContainer` interface for client connections. TCK-related test categories include:
+
+### WebSocketContainer API Tests (`api/jakarta/websocket/websocketcontainer/`)
+- `getMaxSessionIdleTimeoutTest` - Get default idle timeout
+- `setMaxSessionIdleTimeoutTest` - Set idle timeout
+- `getMaxTextMessageBufferSizeTest` - Get text buffer size
+- `setMaxTextMessageBufferSizeTest` - Set text buffer size
+- `getMaxBinaryMessageBufferSizeTest` - Get binary buffer size
+- `setMaxBinaryMessageBufferSizeTest` - Set binary buffer size
+- `getAsyncSendTimeoutTest` - Get async send timeout
+- `setAsyncSendTimeoutTest` - Set async send timeout
+- `getInstalledExtensionsTest` - Get installed extensions
+
+### Client Endpoint Tests (`ee/jakarta/websocket/clientendpoint/`)
+- Basic @ClientEndpoint annotation
+- Subprotocol negotiation (not yet implemented)
+- Configurator support (not yet implemented)
+
+### Client Endpoint Return Type Tests (`ee/jakarta/websocket/clientendpointreturntype/`)
+- Primitive return types (int, long, float, double, boolean, byte, short)
+- Wrapper return types (Integer, Long, Float, etc.)
+- ByteBuffer and byte[] return types
+- Encoder-based return types
 
 ## Implementation Plan
 
