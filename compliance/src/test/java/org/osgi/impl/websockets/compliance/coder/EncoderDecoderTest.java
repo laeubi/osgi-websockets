@@ -772,4 +772,252 @@ public class EncoderDecoderTest {
         @Override
         public void destroy() {}
     }
+    
+    // ==================== Advanced Decoder Selection Tests ====================
+    
+    /**
+     * Test decoder selection order with willDecode
+     * 
+     * TCK Reference: textDecoderWillDecodeTest
+     * Specification: Section 4.5 - First decoder whose willDecode returns true is used
+     */
+    @Test
+    public void testDecoderSelectionOrder() throws Exception {
+        server.createEndpoint(DecoderSelectionOrderEndpoint.class, null, createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<String> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/decoderorder"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, 
+                                                     CharSequence data, 
+                                                     boolean last) {
+                        messageFuture.complete(data.toString());
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        // Send message that first decoder will accept
+        ws.sendText("FIRST:value", true);
+        String response = messageFuture.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("FIRST:value:FIRST", response,
+            "First decoder should be used when its willDecode returns true");
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+    }
+    
+    /**
+     * Test decoder selection with second decoder
+     * 
+     * TCK Reference: textDecoderWillDecodeTest
+     * Specification: Section 4.5 - Second decoder used when first returns false
+     */
+    @Test
+    public void testSecondDecoderSelection() throws Exception {
+        server.createEndpoint(DecoderSelectionOrderEndpoint.class, null, createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<String> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/decoderorder"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, 
+                                                     CharSequence data, 
+                                                     boolean last) {
+                        messageFuture.complete(data.toString());
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        // Send message that second decoder will accept
+        ws.sendText("SECOND:value", true);
+        String response = messageFuture.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("SECOND:value:SECOND", response,
+            "Second decoder should be used when first decoder's willDecode returns false");
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+    }
+    
+    /**
+     * Test multiple text encoders
+     * 
+     * TCK Reference: Multiple encoder configuration
+     * Specification: Section 4.5 - Multiple encoders can be registered
+     */
+    @Test
+    public void testMultipleTextEncoders() throws Exception {
+        server.createEndpoint(MultipleEncodersEndpoint.class, null, createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<String> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/multiencoders"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, 
+                                                     CharSequence data, 
+                                                     boolean last) {
+                        messageFuture.complete(data.toString());
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        ws.sendText("test", true);
+        String response = messageFuture.get(5, TimeUnit.SECONDS);
+        
+        assertTrue(response.startsWith("TYPE1:") || response.startsWith("TYPE2:"),
+            "One of the encoders should be used");
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+    }
+    
+    // ==================== Additional Endpoint Classes ====================
+    
+    @ServerEndpoint(value = "/decoderorder", 
+                    decoders = {FirstTextDecoder.class, SecondTextDecoder.class},
+                    encoders = {StringBeanTextEncoder.class})
+    public static class DecoderSelectionOrderEndpoint {
+        @OnMessage
+        public void processMessage(StringBean message, Session session) throws IOException, EncodeException {
+            session.getBasicRemote().sendObject(message);
+        }
+    }
+    
+    @ServerEndpoint(value = "/multiencoders",
+                    encoders = {Type1Encoder.class, Type2Encoder.class})
+    public static class MultipleEncodersEndpoint {
+        @OnMessage
+        public void processMessage(String message, Session session) throws IOException, EncodeException {
+            if ("test".equals(message)) {
+                // Send Type1 object
+                session.getBasicRemote().sendObject(new Type1("test"));
+            }
+        }
+    }
+    
+    // ==================== Common Data Classes ====================
+    
+    public static class StringBean {
+        private String value;
+        
+        public StringBean() {}
+        
+        public StringBean(String value) {
+            this.value = value;
+        }
+        
+        public String get() {
+            return value;
+        }
+        
+        public void set(String value) {
+            this.value = value;
+        }
+    }
+    
+    // ==================== Additional Decoder Classes ====================
+    
+    public static class FirstTextDecoder implements Decoder.Text<StringBean> {
+        @Override
+        public StringBean decode(String s) throws DecodeException {
+            StringBean bean = new StringBean();
+            bean.set(s + ":FIRST");
+            return bean;
+        }
+        
+        @Override
+        public boolean willDecode(String s) {
+            return s != null && s.startsWith("FIRST:");
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {}
+        
+        @Override
+        public void destroy() {}
+    }
+    
+    public static class SecondTextDecoder implements Decoder.Text<StringBean> {
+        @Override
+        public StringBean decode(String s) throws DecodeException {
+            StringBean bean = new StringBean();
+            bean.set(s + ":SECOND");
+            return bean;
+        }
+        
+        @Override
+        public boolean willDecode(String s) {
+            return s != null && s.startsWith("SECOND:");
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {}
+        
+        @Override
+        public void destroy() {}
+    }
+    
+    // ==================== Additional Encoder Classes ====================
+    
+    public static class StringBeanTextEncoder implements Encoder.Text<StringBean> {
+        @Override
+        public String encode(StringBean object) throws EncodeException {
+            return object.get();
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {}
+        
+        @Override
+        public void destroy() {}
+    }
+    
+    public static class Type1 {
+        String value;
+        public Type1(String value) { this.value = value; }
+        public String getValue() { return value; }
+    }
+    
+    public static class Type2 {
+        String value;
+        public Type2(String value) { this.value = value; }
+        public String getValue() { return value; }
+    }
+    
+    public static class Type1Encoder implements Encoder.Text<Type1> {
+        @Override
+        public String encode(Type1 object) throws EncodeException {
+            return "TYPE1:" + object.getValue();
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {}
+        
+        @Override
+        public void destroy() {}
+    }
+    
+    public static class Type2Encoder implements Encoder.Text<Type2> {
+        @Override
+        public String encode(Type2 object) throws EncodeException {
+            return "TYPE2:" + object.getValue();
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {}
+        
+        @Override
+        public void destroy() {}
+    }
 }

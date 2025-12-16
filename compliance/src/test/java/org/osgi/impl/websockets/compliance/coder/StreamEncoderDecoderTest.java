@@ -496,6 +496,14 @@ public class StreamEncoderDecoderTest {
         public StreamMessage(String content) {
             this.content = content;
         }
+        
+        public String getValue() {
+            return content;
+        }
+        
+        public void setValue(String content) {
+            this.content = content;
+        }
     }
     
     // TextStream Encoders
@@ -638,5 +646,245 @@ public class StreamEncoderDecoderTest {
         
         @Override
         public void destroy() {}
+    }
+    
+    // ==================== Additional Stream Encoder/Decoder Tests ====================
+    
+    /**
+     * Test stream encoder initialization and destruction
+     * 
+     * TCK Reference: textStreamEncoderInitDestroyTest
+     * Specification: Section 4.5 - Stream encoder lifecycle
+     */
+    @Test
+    public void testTextStreamEncoderLifecycle() throws Exception {
+        LifecycleTextStreamEncoder.reset();
+        server.createEndpoint(TextStreamLifecycleEndpoint.class, null, createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<String> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/textstreamlifecycle"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, 
+                                                     CharSequence data, 
+                                                     boolean last) {
+                        messageFuture.complete(data.toString());
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        ws.sendText("test", true);
+        String response = messageFuture.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("TEXT_STREAM:test", response);
+        assertTrue(LifecycleTextStreamEncoder.wasInitCalled(), "Encoder init should be called");
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+        
+        // Note: destroy() is called when endpoint is disposed, which happens
+        // when server shuts down. Testing destroy() would require explicit
+        // endpoint disposal, which is tested in the existing lifecycle test.
+    }
+    
+    /**
+     * Test binary stream encoder initialization and destruction
+     * 
+     * TCK Reference: binaryStreamEncoderInitDestroyTest
+     * Specification: Section 4.5 - Stream encoder lifecycle
+     */
+    @Test
+    public void testBinaryStreamEncoderLifecycle() throws Exception {
+        LifecycleBinaryStreamEncoder.reset();
+        server.createEndpoint(BinaryStreamLifecycleEndpoint.class, null, createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<ByteBuffer> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/binarystreamlifecycle"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onBinary(WebSocket webSocket, 
+                                                       ByteBuffer data, 
+                                                       boolean last) {
+                        messageFuture.complete(data);
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        ws.sendText("test", true);
+        ByteBuffer response = messageFuture.get(5, TimeUnit.SECONDS);
+        
+        byte[] bytes = new byte[response.remaining()];
+        response.get(bytes);
+        String result = new String(bytes);
+        
+        assertEquals("BINARY_STREAM:test", result);
+        assertTrue(LifecycleBinaryStreamEncoder.wasInitCalled(), "Encoder init should be called");
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+        
+        // Note: destroy() is called when endpoint is disposed, which happens
+        // when server shuts down. Testing destroy() would require explicit
+        // endpoint disposal, which is tested in the existing lifecycle test.
+    }
+    
+    /**
+     * Test stream decoder initialization and destruction
+     * 
+     * TCK Reference: textStreamDecoderInitDestroyTest
+     * Specification: Section 4.5 - Stream decoder lifecycle
+     */
+    @Test
+    public void testTextStreamDecoderLifecycle() throws Exception {
+        LifecycleTextStreamDecoder.reset();
+        server.createEndpoint(TextStreamDecoderLifecycleEndpoint.class, null, createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<String> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/textstreamdecoderlife"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, 
+                                                     CharSequence data, 
+                                                     boolean last) {
+                        messageFuture.complete(data.toString());
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        ws.sendText("decode-test", true);
+        String response = messageFuture.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("DECODED:decode-test", response);
+        assertTrue(LifecycleTextStreamDecoder.wasInitCalled(), "Decoder init should be called");
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+        
+        // Note: destroy() is called when endpoint is disposed, which happens
+        // when server shuts down. Testing destroy() would require explicit
+        // endpoint disposal, which is tested in the existing lifecycle test.
+    }
+    
+    // ==================== Lifecycle Test Endpoints ====================
+    
+    @ServerEndpoint(value = "/textstreamlifecycle", encoders = {LifecycleTextStreamEncoder.class})
+    public static class TextStreamLifecycleEndpoint {
+        @OnMessage
+        public void onMessage(String message, Session session) throws IOException, EncodeException {
+            session.getBasicRemote().sendObject(new StreamMessage(message));
+        }
+    }
+    
+    @ServerEndpoint(value = "/binarystreamlifecycle", encoders = {LifecycleBinaryStreamEncoder.class})
+    public static class BinaryStreamLifecycleEndpoint {
+        @OnMessage
+        public void onMessage(String message, Session session) throws IOException, EncodeException {
+            session.getBasicRemote().sendObject(new StreamMessage(message));
+        }
+    }
+    
+    @ServerEndpoint(value = "/textstreamdecoderlife", decoders = {LifecycleTextStreamDecoder.class})
+    public static class TextStreamDecoderLifecycleEndpoint {
+        @OnMessage
+        public String onMessage(StreamMessage message) {
+            return "DECODED:" + message.getValue();
+        }
+    }
+    
+    // ==================== Lifecycle Tracking Encoders/Decoders ====================
+    
+    public static class LifecycleTextStreamEncoder implements Encoder.TextStream<StreamMessage> {
+        private static volatile boolean initCalled = false;
+        private static volatile boolean destroyCalled = false;
+        
+        public static void reset() {
+            initCalled = false;
+            destroyCalled = false;
+        }
+        
+        public static boolean wasInitCalled() { return initCalled; }
+        public static boolean wasDestroyCalled() { return destroyCalled; }
+        
+        @Override
+        public void encode(StreamMessage object, Writer writer) throws EncodeException, IOException {
+            writer.write("TEXT_STREAM:" + object.getValue());
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {
+            initCalled = true;
+        }
+        
+        @Override
+        public void destroy() {
+            destroyCalled = true;
+        }
+    }
+    
+    public static class LifecycleBinaryStreamEncoder implements Encoder.BinaryStream<StreamMessage> {
+        private static volatile boolean initCalled = false;
+        private static volatile boolean destroyCalled = false;
+        
+        public static void reset() {
+            initCalled = false;
+            destroyCalled = false;
+        }
+        
+        public static boolean wasInitCalled() { return initCalled; }
+        public static boolean wasDestroyCalled() { return destroyCalled; }
+        
+        @Override
+        public void encode(StreamMessage object, OutputStream os) throws EncodeException, IOException {
+            os.write(("BINARY_STREAM:" + object.getValue()).getBytes());
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {
+            initCalled = true;
+        }
+        
+        @Override
+        public void destroy() {
+            destroyCalled = true;
+        }
+    }
+    
+    public static class LifecycleTextStreamDecoder implements Decoder.TextStream<StreamMessage> {
+        private static volatile boolean initCalled = false;
+        private static volatile boolean destroyCalled = false;
+        
+        public static void reset() {
+            initCalled = false;
+            destroyCalled = false;
+        }
+        
+        public static boolean wasInitCalled() { return initCalled; }
+        public static boolean wasDestroyCalled() { return destroyCalled; }
+        
+        @Override
+        public StreamMessage decode(Reader reader) throws DecodeException, IOException {
+            BufferedReader br = new BufferedReader(reader);
+            String line = br.readLine();
+            return new StreamMessage(line);
+        }
+        
+        @Override
+        public void init(EndpointConfig config) {
+            initCalled = true;
+        }
+        
+        @Override
+        public void destroy() {
+            destroyCalled = true;
+        }
     }
 }

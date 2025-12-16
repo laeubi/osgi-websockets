@@ -306,23 +306,33 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - ✅ Text message handling: 8/8 tests (String, String+Session, Session+String, custom decoder, return values, void return, empty string, large message)
   - ✅ Binary message handling: 7/7 tests (ByteBuffer, byte[], ByteBuffer+Session, byte[]+Session, Session+ByteBuffer, large binary, empty binary)
   - ✅ Primitive type conversion: 25/25 tests (boolean, byte, char, short, int, long, float, double - each with 3 parameter combinations, plus wrapper type test)
-- [x] Task 3: Encoder/Decoder Tests - 21/30 ✅ **SIGNIFICANTLY COMPLETE**
+- [x] Task 3: Encoder/Decoder Tests - 27/30 ✅ **COMPLETE (90%)**
   - ✅ Text encoder/decoder: 3/3 tests (simple object, willDecode, multiple decoders)
   - ✅ Binary encoder/decoder: 3/3 tests (simple object with custom type, willDecode, multiple decoders)
   - ✅ Lifecycle tests: 1/1 test (init/destroy for text encoder/decoder)
-  - ✅ Stream encoders/decoders: 9/9 tests **COMPLETE** (TextStream and BinaryStream support implemented)
+  - ✅ Stream encoders/decoders: 12/12 tests **COMPLETE** (TextStream and BinaryStream support with lifecycle)
     - TextStream encoder: Boolean, Integer, Long
     - TextStream decoder: custom object
     - BinaryStream encoder: Boolean, Integer, Long
     - BinaryStream decoder: custom object
     - Combined TextStream encoder/decoder: bidirectional
-  - ✅ Error handling: 5/5 tests **COMPLETE** (DecodeException and EncodeException propagation to @OnError) ⭐ **NEW**
+    - TextStream encoder lifecycle (init)
+    - BinaryStream encoder lifecycle (init)
+    - TextStream decoder lifecycle (init)
+  - ✅ Error handling: 5/5 tests **COMPLETE** (DecodeException and EncodeException propagation to @OnError)
     - Text decoder throwing DecodeException
     - Binary decoder throwing DecodeException
     - Text encoder throwing EncodeException
     - Binary encoder throwing EncodeException
     - Text stream decoder throwing IOException
-  - ⏸️ Additional encoder/decoder tests: 0/9 (pending - advanced scenarios, multiple encoders, priority)
+  - ✅ Advanced scenarios: 6/9 tests **SIGNIFICANTLY COMPLETE** ⭐ **NEW**
+    - Decoder selection order with willDecode (first decoder)
+    - Decoder selection with second decoder
+    - Multiple text encoders
+    - TextStream encoder init lifecycle verification
+    - BinaryStream encoder init lifecycle verification
+    - TextStream decoder init lifecycle verification
+  - ⏸️ Remaining tests: 3/30 deferred (binary stream decoder lifecycle, additional willDecode edge cases, multiple binary encoders)
 - [x] Task 4: Session API Tests - 18/25 ✅ **COMPLETED (Core Features)**
   - ✅ Session lifecycle: 4/4 tests (isOpen, getId, close, close with reason)
   - ✅ Session configuration: 3/3 tests (maxIdleTimeout, maxBinaryBufferSize, maxTextBufferSize)
@@ -367,16 +377,16 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 149/280 tests (53.2%)**
+**Total Progress: 155/280 tests (55.4%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 155, Failures: 0, Errors: 0, Skipped: 1
+Tests run: 161, Failures: 0, Errors: 0, Skipped: 1
 ```
 
-All compliance tests passing! ✅ (Phase 1 encoder/decoder error handling complete)
+All compliance tests passing! ✅ (Phase 1 Task 3 encoder/decoder tests 90% complete - 27/30 tests)
 
 ### Test Coverage Summary
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
@@ -388,7 +398,7 @@ All compliance tests passing! ✅ (Phase 1 encoder/decoder error handling comple
   - boolean, byte, char, short, int, long, float, double
   - Each primitive tested with 3 parameter combinations: (primitive), (primitive, Session), (Session, primitive)
   - Wrapper type validation (Integer)
-- **Encoder/Decoder**: 21 tests
+- **Encoder/Decoder**: 27 tests (90% complete)
   - Text encoder/decoder: 3 tests (simple object, willDecode, multiple decoders)
   - Binary encoder/decoder: 3 tests (custom object (Integer), willDecode, multiple decoders)
   - Lifecycle: 1 test (init/destroy for text encoder/decoder)
@@ -398,10 +408,15 @@ All compliance tests passing! ✅ (Phase 1 encoder/decoder error handling comple
     - BinaryStream encoder: Boolean, Integer, Long types
     - BinaryStream decoder: custom object
     - Combined TextStream encoder/decoder: bidirectional message processing
-  - **Error handling**: 5 tests (DecodeException and EncodeException propagation to @OnError) ⭐ **NEW**
+  - **Error handling**: 5 tests (DecodeException and EncodeException propagation to @OnError)
     - Text/binary decoder exceptions caught and forwarded to @OnError
     - Text/binary encoder exceptions wrapped in IOException
     - Stream decoder IOException handling
+  - **Advanced scenarios**: 6 tests (decoder selection, multiple encoders, lifecycle verification) ⭐ **NEW**
+    - Decoder selection order with willDecode
+    - Second decoder selection when first returns false
+    - Multiple text encoders
+    - Stream encoder/decoder init() lifecycle verification (3 tests)
 - **Session API**: 17 tests - Complete core session functionality
   - getId(), isOpen(), close(), close(CloseReason)
   - getRequestURI(), getProtocolVersion()
