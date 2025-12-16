@@ -14,6 +14,7 @@ import jakarta.websocket.OnClose;
 import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
+import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 
 import java.net.URI;
@@ -672,10 +673,6 @@ public class SessionAPITest {
      * 
      * TCK Reference: getPathParametersTest
      * Specification: Section 2.5 (Session.getPathParameters())
-     * 
-     * Note: Path parameters require @PathParam support which is planned for Phase 3.
-     * This test verifies the API exists and returns an empty map for endpoints
-     * without path parameters.
      */
     @Test
     public void testGetPathParametersEmpty() throws Exception {
@@ -700,9 +697,52 @@ public class SessionAPITest {
         ws.sendText("params", true);
         String response = messageFuture.get(5, TimeUnit.SECONDS);
         
-        // Without path parameter support, should return empty map
+        // Without path parameters in the URI template, should return empty map
         assertEquals("params:0", response, 
-            "Path parameters map should be empty without @PathParam support");
+            "Path parameters map should be empty for endpoints without path parameters");
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
+    }
+    
+    /**
+     * Test Session.getPathParameters() returns actual path parameters
+     * 
+     * TCK Reference: getPathParametersTest
+     * Specification: Section 2.5 (Session.getPathParameters())
+     * 
+     * Tests that path parameters are correctly extracted and available via Session API.
+     */
+    @Test
+    public void testGetPathParametersWithValues() throws Exception {
+        server.createEndpoint(GetPathParametersWithValuesEndpoint.class, 
+            "/pathparams/{param1}/{param2}", createHandler());
+        
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<String> messageFuture = new CompletableFuture<>();
+        
+        WebSocket ws = client.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/pathparams/value1/value2"), 
+                new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, 
+                                                     CharSequence data, 
+                                                     boolean last) {
+                        messageFuture.complete(data.toString());
+                        return CompletableFuture.completedFuture(null);
+                    }
+                })
+            .join();
+        
+        ws.sendText("getparams", true);
+        String response = messageFuture.get(5, TimeUnit.SECONDS);
+        
+        // Should return: "params:2:param1=value1:param2=value2"
+        assertTrue(response.startsWith("params:2:"), 
+            "Should have 2 path parameters");
+        assertTrue(response.contains("param1=value1"), 
+            "Should contain param1=value1");
+        assertTrue(response.contains("param2=value2"), 
+            "Should contain param2=value2");
         
         ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete");
     }
@@ -907,9 +947,28 @@ public class SessionAPITest {
     public static class GetPathParametersEndpoint {
         @OnMessage
         public String onMessage(String message, Session session) {
-            // getPathParameters() should return a Map (empty without @PathParam support)
+            // getPathParameters() should return a Map (empty without path parameters)
             int count = session.getPathParameters().size();
             return "params:" + count;
+        }
+    }
+    
+    @ServerEndpoint("/pathparams/{param1}/{param2}")
+    public static class GetPathParametersWithValuesEndpoint {
+        @OnMessage
+        public String onMessage(String message, Session session) {
+            // getPathParameters() should return a Map with the path parameters
+            java.util.Map<String, String> params = session.getPathParameters();
+            int count = params.size();
+            StringBuilder result = new StringBuilder("params:" + count);
+            
+            // Add each parameter in sorted order for deterministic testing
+            params.entrySet().stream()
+                .sorted(java.util.Map.Entry.comparingByKey())
+                .forEach(entry -> result.append(":").append(entry.getKey())
+                    .append("=").append(entry.getValue()));
+            
+            return result.toString();
         }
     }
 }

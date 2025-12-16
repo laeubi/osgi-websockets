@@ -318,7 +318,7 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
     - Combined TextStream encoder/decoder: bidirectional
   - ⏸️ Error handling: 0/5 (not implemented yet - requires encoder/decoder exception tests)
   - ⏸️ Additional encoder/decoder tests: 0/8 (pending - advanced scenarios)
-- [x] Task 4: Session API Tests - 17/25 ✅ **COMPLETED (Core Features)**
+- [x] Task 4: Session API Tests - 18/25 ✅ **COMPLETED (Core Features)**
   - ✅ Session lifecycle: 4/4 tests (isOpen, getId, close, close with reason)
   - ✅ Session configuration: 3/3 tests (maxIdleTimeout, maxBinaryBufferSize, maxTextBufferSize)
   - ✅ Session information: 2/2 tests (getRequestURI, getProtocolVersion)
@@ -328,8 +328,8 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - ✅ Message handlers API: 1/1 test (addMessageHandler, getMessageHandlers - API surface testing)
   - ✅ Container access: 1/1 test (getContainer returns null for server-side sessions)
   - ✅ Open sessions: 1/1 test (getOpenSessions returns empty set - current implementation)
-  - ✅ Path parameters: 1/1 test (getPathParameters returns empty map without @PathParam support)
-  - ⏸️ Remaining features: 8/25 tests deferred (require Phase 3 features: @PathParam support, message handler invocation)
+  - ✅ Path parameters: 2/2 tests (getPathParameters with and without path parameters) ⭐ **UPDATED**
+  - ⏸️ Remaining features: 7/25 tests deferred (require message handler invocation - needs implementation)
 - [ ] Task 5: Annotation Handler Tests - 0/15
 
 ### Phase 2: Negative Validation Tests
@@ -362,16 +362,16 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 143/280 tests (51.1%)**
+**Total Progress: 144/280 tests (51.4%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 149, Failures: 0, Errors: 0, Skipped: 1
+Tests run: 150, Failures: 0, Errors: 0, Skipped: 1
 ```
 
-All compliance tests passing! ✅ (Phase 3, Task 8 @PathParam support FULLY COMPLETED - 27/27 tests)
+All compliance tests passing! ✅ (Phase 1 deferred @PathParam test completed, Phase 3 Task 8 fully complete)
 
 ### Test Coverage Summary
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
@@ -403,7 +403,7 @@ All compliance tests passing! ✅ (Phase 3, Task 8 @PathParam support FULLY COMP
   - addMessageHandler(), getMessageHandlers() (API surface testing)
   - getContainer() (returns null for server-side sessions)
   - getOpenSessions() (returns empty set in current implementation)
-  - getPathParameters() (now fully functional with @PathParam support)
+  - getPathParameters() - 2 tests (empty map without params, populated map with path parameters)
 - **@PathParam Support**: 27 tests - Complete URI template parameter extraction with all lifecycle methods
   - Single String parameter: 5 tests (@OnMessage, @OnOpen, @OnError IOException, @OnError RuntimeException, @OnClose)
   - Multiple String parameters: 5 tests (all lifecycle methods)
