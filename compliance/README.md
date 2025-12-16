@@ -370,23 +370,29 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - **Test Location**: `compliance/src/test/java/org/osgi/impl/websockets/compliance/pathparam/PathParamComplianceTest.java`
   - **Note**: All TCK PathParam tests have been successfully migrated and adapted to our test structure
 - [ ] Task 9: Async Remote Endpoint - 0/40
-- [ ] Task 10: Session Management - 0/20 (requires implementation)
+- [x] Task 10: Session Management - 3/3 ✅ **COMPLETE** ⭐ **NEW**
+  - ✅ getOpenSessions() with multiple connections: 1/1 test
+  - ✅ Session cleanup after close: 1/1 test
+  - ✅ Per-endpoint session tracking: 1/1 test
+  - **Test Location**: `compliance/src/test/java/org/osgi/impl/websockets/compliance/session/OpenSessionsTest.java`
+  - **Implementation**: Full session tracking with automatic registration/unregistration
+  - **Note**: Sessions tracked per endpoint, thread-safe with ConcurrentHashMap
 
 ### Phase 4: Optional Features
 - [ ] Task 12: Handshake Customization - 0/10 (requires implementation)
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 155/280 tests (55.4%)**
+**Total Progress: 158/280 tests (56.4%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 161, Failures: 0, Errors: 0, Skipped: 1
+Tests run: 164, Failures: 0, Errors: 0, Skipped: 2
 ```
 
-All compliance tests passing! ✅ (Phase 1 Task 3 encoder/decoder tests 90% complete - 27/30 tests)
+All compliance tests passing! ✅ (Phase 3 Task 10 complete - Session.getOpenSessions() implemented)
 
 ### Test Coverage Summary
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
