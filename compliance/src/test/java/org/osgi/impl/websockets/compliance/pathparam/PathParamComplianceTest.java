@@ -393,6 +393,449 @@ public class PathParamComplianceTest {
         endpoint.dispose();
     }
     
+    // ==================== RuntimeException in @OnError Tests ====================
+    
+    /**
+     * Test @PathParam with single String parameter in @OnError (RuntimeException)
+     * 
+     * TCK Reference: directStringParamOnRETest
+     * Specification: Section 4.3-3, 4.3-4
+     */
+    @Test
+    public void testSingleStringPathParamOnRuntimeException() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            SingleStringParamEndpoint.class, "/param/{param1}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/param/runtimevalue"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("RUNTIMEEXCEPTION", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("runtimevalue", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with multiple String parameters in @OnError (IOException)
+     * 
+     * TCK Reference: multipleStringParamsOnIOETest
+     * Specification: Section 4.3-3, 4.3-4
+     */
+    @Test
+    public void testMultipleStringPathParamsOnIOException() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            MultipleStringParamEndpoint.class, "/multi/{param1}/{param2}/{param3}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/multi/io1/io2/io3"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("IOEXCEPTION", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("io1io2io3", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with multiple String parameters in @OnError (RuntimeException)
+     * 
+     * TCK Reference: multipleStringParamsOnRETest
+     * Specification: Section 4.3-3, 4.3-4
+     */
+    @Test
+    public void testMultipleStringPathParamsOnRuntimeException() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            MultipleStringParamEndpoint.class, "/multi/{param1}/{param2}/{param3}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/multi/rt1/rt2/rt3"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("RUNTIMEEXCEPTION", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("rt1rt2rt3", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with non-matching parameter name in @OnOpen
+     * 
+     * TCK Reference: noStringParamsOnOpenTest
+     * Specification: Section 4.3-3
+     */
+    @Test
+    public void testNonMatchingPathParamOnOpen() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            NonMatchingParamEndpoint.class, "/param/{actualParam}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/param/testvalue"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("OPEN", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("null", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with non-matching parameter name in @OnError (IOException)
+     * 
+     * TCK Reference: noStringParamsOnIOETest
+     * Specification: Section 4.3-3
+     */
+    @Test
+    public void testNonMatchingPathParamOnIOException() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            NonMatchingParamEndpoint.class, "/param/{actualParam}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/param/errorval"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("IOEXCEPTION", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("null", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with non-matching parameter name in @OnError (RuntimeException)
+     * 
+     * TCK Reference: noStringParamsOnRETest
+     * Specification: Section 4.3-3
+     */
+    @Test
+    public void testNonMatchingPathParamOnRuntimeException() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            NonMatchingParamEndpoint.class, "/param/{actualParam}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/param/rtval"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("RUNTIMEEXCEPTION", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("null", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with boolean and char parameters in @OnError (IOException)
+     * 
+     * TCK Reference: primitiveBooleanAndCharParamsOnIOETest
+     * Specification: Section 4.3-3, 4.3-5
+     */
+    @Test
+    public void testBooleanAndCharPathParamsOnIOException() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            BooleanCharParamEndpoint.class, "/different/{param1}/{param2}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/different/false/Z"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("IOEXCEPTION", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("falseZ", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with boolean and char parameters in @OnError (RuntimeException)
+     * 
+     * TCK Reference: primitiveBooleanAndCharParamsOnRETest
+     * Specification: Section 4.3-3, 4.3-5
+     */
+    @Test
+    public void testBooleanAndCharPathParamsOnRuntimeException() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            BooleanCharParamEndpoint.class, "/different/{param1}/{param2}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/different/true/A"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("RUNTIMEEXCEPTION", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("trueA", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with Double and Float parameters in @OnError (IOException)
+     * 
+     * TCK Reference: fullDoubleAndFloatParamsOnIOTest
+     * Specification: Section 4.3-3, 4.3-5
+     */
+    @Test
+    public void testDoubleAndFloatPathParamsOnIOException() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            DoubleFloatParamEndpoint.class, "/numeric/{param1}/{param2}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/numeric/11.22/33.44"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("IOEXCEPTION", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("11.2233.44", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with Double and Float parameters in @OnError (RuntimeException)
+     * 
+     * TCK Reference: fullDoubleAndFloatParamsOnRETest
+     * Specification: Section 4.3-3, 4.3-5
+     */
+    @Test
+    public void testDoubleAndFloatPathParamsOnRuntimeException() throws Exception {
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            DoubleFloatParamEndpoint.class, "/numeric/{param1}/{param2}", createHandler());
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/numeric/55.66/77.88"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("RUNTIMEEXCEPTION", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        
+        assertEquals("55.6677.88", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        endpoint.dispose();
+    }
+    
+    // ==================== @OnClose with @PathParam Tests ====================
+    
+    /**
+     * Test @PathParam with single String parameter in @OnClose
+     * 
+     * TCK Reference: directStringParamOnCloseTest
+     * Specification: Section 4.3-3, 4.3-4
+     */
+    @Test
+    public void testSingleStringPathParamOnClose() throws Exception {
+        OnCloseTestHelper helper = new OnCloseTestHelper();
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            SingleStringParamWithCloseEndpoint.class, "/param/{param1}", createHandlerWithHelper(helper));
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/param/closevalue"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("MESSAGE", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        assertEquals("closevalue", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        
+        // Wait a bit for @OnClose to be called
+        Thread.sleep(200);
+        
+        assertEquals("closevalue", helper.getClosedParam());
+        
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with multiple String parameters in @OnClose
+     * 
+     * TCK Reference: multipleStringParamsOnCloseTest
+     * Specification: Section 4.3-3, 4.3-4
+     */
+    @Test
+    public void testMultipleStringPathParamsOnClose() throws Exception {
+        OnCloseTestHelper helper = new OnCloseTestHelper();
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            MultipleStringParamWithCloseEndpoint.class, "/multi/{param1}/{param2}/{param3}", 
+            createHandlerWithHelper(helper));
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/multi/c1/c2/c3"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("MESSAGE", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        assertEquals("c1c2c3", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        
+        // Wait a bit for @OnClose to be called
+        Thread.sleep(200);
+        
+        assertEquals("c1c2c3", helper.getClosedParam());
+        
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with non-matching parameter name in @OnClose
+     * 
+     * TCK Reference: noStringParamsOnCloseTest
+     * Specification: Section 4.3-3
+     */
+    @Test
+    public void testNonMatchingPathParamOnClose() throws Exception {
+        OnCloseTestHelper helper = new OnCloseTestHelper();
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            NonMatchingParamWithCloseEndpoint.class, "/param/{actualParam}", 
+            createHandlerWithHelper(helper));
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/param/anyvalue"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("MESSAGE", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        assertEquals("null", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        
+        // Wait a bit for @OnClose to be called
+        Thread.sleep(200);
+        
+        assertEquals("null", helper.getClosedParam());
+        
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with boolean and char parameters in @OnClose
+     * 
+     * TCK Reference: primitiveBooleanAndCharParamsOnCloseTest
+     * Specification: Section 4.3-3, 4.3-5
+     */
+    @Test
+    public void testBooleanAndCharPathParamsOnClose() throws Exception {
+        OnCloseTestHelper helper = new OnCloseTestHelper();
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            BooleanCharParamWithCloseEndpoint.class, "/different/{param1}/{param2}", 
+            createHandlerWithHelper(helper));
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/different/true/B"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("MESSAGE", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        assertEquals("trueB", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        
+        // Wait a bit for @OnClose to be called
+        Thread.sleep(200);
+        
+        assertEquals("trueB", helper.getClosedParam());
+        
+        endpoint.dispose();
+    }
+    
+    /**
+     * Test @PathParam with Double and Float parameters in @OnClose
+     * 
+     * TCK Reference: fullDoubleAndFloatParamsOnCloseTest
+     * Specification: Section 4.3-3, 4.3-5
+     */
+    @Test
+    public void testDoubleAndFloatPathParamsOnClose() throws Exception {
+        OnCloseTestHelper helper = new OnCloseTestHelper();
+        WebSocketEndpoint endpoint = server.createEndpoint(
+            DoubleFloatParamWithCloseEndpoint.class, "/numeric/{param1}/{param2}", 
+            createHandlerWithHelper(helper));
+        
+        CompletableFuture<String> response = new CompletableFuture<>();
+        
+        WebSocket ws = httpClient.newWebSocketBuilder()
+            .buildAsync(URI.create("ws://localhost:" + port + "/numeric/88.99/11.22"), 
+                createListener(response))
+            .join();
+        
+        ws.sendText("MESSAGE", true);
+        String result = response.get(5, TimeUnit.SECONDS);
+        assertEquals("88.9911.22", result);
+        
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "Test complete").join();
+        
+        // Wait a bit for @OnClose to be called
+        Thread.sleep(200);
+        
+        assertEquals("88.9911.22", helper.getClosedParam());
+        
+        endpoint.dispose();
+    }
+    
     // ==================== Helper Methods ====================
     
     private <T> EndpointHandler<T> createHandler() {
@@ -411,6 +854,45 @@ public class PathParamComplianceTest {
                 // Cleanup if needed
             }
         };
+    }
+    
+    private <T> EndpointHandler<T> createHandlerWithHelper(OnCloseTestHelper helper) {
+        return new EndpointHandler<T>() {
+            @Override
+            public T createEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+                try {
+                    T instance = endpointClass.getDeclaredConstructor().newInstance();
+                    // Set the helper on the endpoint
+                    if (instance instanceof OnCloseAware) {
+                        ((OnCloseAware) instance).setHelper(helper);
+                    }
+                    return instance;
+                } catch (Exception e) {
+                    throw new InstantiationException("Failed to create endpoint: " + e.getMessage());
+                }
+            }
+            
+            @Override
+            public void sessionEnded(T endpointInstance) {
+                // Cleanup if needed
+            }
+        };
+    }
+    
+    private static class OnCloseTestHelper {
+        private volatile String closedParam;
+        
+        public void setClosedParam(String param) {
+            this.closedParam = param;
+        }
+        
+        public String getClosedParam() {
+            return closedParam;
+        }
+    }
+    
+    private interface OnCloseAware {
+        void setHelper(OnCloseTestHelper helper);
     }
     
     private WebSocket.Listener createListener(CompletableFuture<String> response) {
@@ -458,6 +940,8 @@ public class PathParamComplianceTest {
                 return savedParam;
             } else if ("IOEXCEPTION".equals(message)) {
                 throw new IOException("TCK INTENDED ERROR");
+            } else if ("RUNTIMEEXCEPTION".equals(message)) {
+                throw new RuntimeException("TCK INTENDED ERROR");
             }
             return "unknown";
         }
@@ -483,13 +967,25 @@ public class PathParamComplianceTest {
         
         @OnMessage
         public String onMessage(@PathParam("param1") String p1, @PathParam("param2") String p2, 
-                                @PathParam("param3") String p3, String message) {
+                                @PathParam("param3") String p3, String message) throws IOException {
             if ("MESSAGE".equals(message)) {
                 return p1 + p2 + p3;
             } else if ("OPEN".equals(message)) {
                 return savedParams[0] + savedParams[1] + savedParams[2];
+            } else if ("IOEXCEPTION".equals(message)) {
+                throw new IOException("TCK INTENDED ERROR");
+            } else if ("RUNTIMEEXCEPTION".equals(message)) {
+                throw new RuntimeException("TCK INTENDED ERROR");
             }
             return "unknown";
+        }
+        
+        @OnError
+        public void onError(@PathParam("param1") String p1, @PathParam("param2") String p2, 
+                           @PathParam("param3") String p3, Session session, Throwable t) throws IOException {
+            if ("TCK INTENDED ERROR".equals(t.getMessage())) {
+                session.getBasicRemote().sendText(p1 + p2 + p3);
+            }
         }
     }
     
@@ -503,13 +999,24 @@ public class PathParamComplianceTest {
         }
         
         @OnMessage
-        public String onMessage(@PathParam("nonExistentParam") String param, String message) {
+        public String onMessage(@PathParam("nonExistentParam") String param, String message) throws IOException {
             if ("MESSAGE".equals(message)) {
                 return String.valueOf(param);
             } else if ("OPEN".equals(message)) {
                 return savedParam;
+            } else if ("IOEXCEPTION".equals(message)) {
+                throw new IOException("TCK INTENDED ERROR");
+            } else if ("RUNTIMEEXCEPTION".equals(message)) {
+                throw new RuntimeException("TCK INTENDED ERROR");
             }
             return "unknown";
+        }
+        
+        @OnError
+        public void onError(@PathParam("nonExistentParam") String param, Session session, Throwable t) throws IOException {
+            if ("TCK INTENDED ERROR".equals(t.getMessage())) {
+                session.getBasicRemote().sendText(String.valueOf(param));
+            }
         }
     }
     
@@ -524,13 +1031,25 @@ public class PathParamComplianceTest {
         }
         
         @OnMessage
-        public String onMessage(@PathParam("param1") boolean p1, @PathParam("param2") char p2, String message) {
+        public String onMessage(@PathParam("param1") boolean p1, @PathParam("param2") char p2, String message) throws IOException {
             if ("MESSAGE".equals(message)) {
                 return String.valueOf(p1) + String.valueOf(p2);
             } else if ("OPEN".equals(message)) {
                 return savedParams[0] + savedParams[1];
+            } else if ("IOEXCEPTION".equals(message)) {
+                throw new IOException("TCK INTENDED ERROR");
+            } else if ("RUNTIMEEXCEPTION".equals(message)) {
+                throw new RuntimeException("TCK INTENDED ERROR");
             }
             return "unknown";
+        }
+        
+        @OnError
+        public void onError(@PathParam("param1") boolean p1, @PathParam("param2") char p2, 
+                           Session session, Throwable t) throws IOException {
+            if ("TCK INTENDED ERROR".equals(t.getMessage())) {
+                session.getBasicRemote().sendText(String.valueOf(p1) + String.valueOf(p2));
+            }
         }
     }
     
@@ -545,13 +1064,25 @@ public class PathParamComplianceTest {
         }
         
         @OnMessage
-        public String onMessage(@PathParam("param1") Double p1, @PathParam("param2") Float p2, String message) {
+        public String onMessage(@PathParam("param1") Double p1, @PathParam("param2") Float p2, String message) throws IOException {
             if ("MESSAGE".equals(message)) {
                 return String.valueOf(p1) + String.valueOf(p2);
             } else if ("OPEN".equals(message)) {
                 return savedParams[0] + savedParams[1];
+            } else if ("IOEXCEPTION".equals(message)) {
+                throw new IOException("TCK INTENDED ERROR");
+            } else if ("RUNTIMEEXCEPTION".equals(message)) {
+                throw new RuntimeException("TCK INTENDED ERROR");
             }
             return "unknown";
+        }
+        
+        @OnError
+        public void onError(@PathParam("param1") Double p1, @PathParam("param2") Float p2, 
+                           Session session, Throwable t) throws IOException {
+            if ("TCK INTENDED ERROR".equals(t.getMessage())) {
+                session.getBasicRemote().sendText(String.valueOf(p1) + String.valueOf(p2));
+            }
         }
     }
     
@@ -572,6 +1103,178 @@ public class PathParamComplianceTest {
                 return savedParam;
             }
             return "unknown";
+        }
+    }
+    
+    // ==================== Endpoints with @OnClose ====================
+    
+    @ServerEndpoint(value = "/param/{param1}")
+    public static class SingleStringParamWithCloseEndpoint implements OnCloseAware {
+        private String savedParam;
+        private OnCloseTestHelper helper;
+        
+        @Override
+        public void setHelper(OnCloseTestHelper helper) {
+            this.helper = helper;
+        }
+        
+        @OnOpen
+        public void onOpen(@PathParam("param1") String param1) {
+            this.savedParam = param1;
+        }
+        
+        @OnMessage
+        public String onMessage(@PathParam("param1") String param1, String message) {
+            if ("MESSAGE".equals(message)) {
+                return param1;
+            } else if ("OPEN".equals(message)) {
+                return savedParam;
+            }
+            return "unknown";
+        }
+        
+        @OnClose
+        public void onClose(@PathParam("param1") String param1) {
+            if (helper != null) {
+                helper.setClosedParam(param1);
+            }
+        }
+    }
+    
+    @ServerEndpoint(value = "/multi/{param1}/{param2}/{param3}")
+    public static class MultipleStringParamWithCloseEndpoint implements OnCloseAware {
+        private String[] savedParams = new String[3];
+        private OnCloseTestHelper helper;
+        
+        @Override
+        public void setHelper(OnCloseTestHelper helper) {
+            this.helper = helper;
+        }
+        
+        @OnOpen
+        public void onOpen(@PathParam("param1") String p1, @PathParam("param2") String p2, @PathParam("param3") String p3) {
+            savedParams[0] = p1;
+            savedParams[1] = p2;
+            savedParams[2] = p3;
+        }
+        
+        @OnMessage
+        public String onMessage(@PathParam("param1") String p1, @PathParam("param2") String p2, 
+                                @PathParam("param3") String p3, String message) {
+            if ("MESSAGE".equals(message)) {
+                return p1 + p2 + p3;
+            } else if ("OPEN".equals(message)) {
+                return savedParams[0] + savedParams[1] + savedParams[2];
+            }
+            return "unknown";
+        }
+        
+        @OnClose
+        public void onClose(@PathParam("param1") String p1, @PathParam("param2") String p2, @PathParam("param3") String p3) {
+            if (helper != null) {
+                helper.setClosedParam(p1 + p2 + p3);
+            }
+        }
+    }
+    
+    @ServerEndpoint(value = "/param/{actualParam}")
+    public static class NonMatchingParamWithCloseEndpoint implements OnCloseAware {
+        private String savedParam;
+        private OnCloseTestHelper helper;
+        
+        @Override
+        public void setHelper(OnCloseTestHelper helper) {
+            this.helper = helper;
+        }
+        
+        @OnOpen
+        public void onOpen(@PathParam("nonExistentParam") String param) {
+            this.savedParam = String.valueOf(param);
+        }
+        
+        @OnMessage
+        public String onMessage(@PathParam("nonExistentParam") String param, String message) {
+            if ("MESSAGE".equals(message)) {
+                return String.valueOf(param);
+            } else if ("OPEN".equals(message)) {
+                return savedParam;
+            }
+            return "unknown";
+        }
+        
+        @OnClose
+        public void onClose(@PathParam("nonExistentParam") String param) {
+            if (helper != null) {
+                helper.setClosedParam(String.valueOf(param));
+            }
+        }
+    }
+    
+    @ServerEndpoint(value = "/different/{param1}/{param2}")
+    public static class BooleanCharParamWithCloseEndpoint implements OnCloseAware {
+        private String[] savedParams = new String[2];
+        private OnCloseTestHelper helper;
+        
+        @Override
+        public void setHelper(OnCloseTestHelper helper) {
+            this.helper = helper;
+        }
+        
+        @OnOpen
+        public void onOpen(@PathParam("param1") boolean p1, @PathParam("param2") char p2) {
+            savedParams[0] = String.valueOf(p1);
+            savedParams[1] = String.valueOf(p2);
+        }
+        
+        @OnMessage
+        public String onMessage(@PathParam("param1") boolean p1, @PathParam("param2") char p2, String message) {
+            if ("MESSAGE".equals(message)) {
+                return String.valueOf(p1) + String.valueOf(p2);
+            } else if ("OPEN".equals(message)) {
+                return savedParams[0] + savedParams[1];
+            }
+            return "unknown";
+        }
+        
+        @OnClose
+        public void onClose(@PathParam("param1") boolean p1, @PathParam("param2") char p2) {
+            if (helper != null) {
+                helper.setClosedParam(String.valueOf(p1) + String.valueOf(p2));
+            }
+        }
+    }
+    
+    @ServerEndpoint(value = "/numeric/{param1}/{param2}")
+    public static class DoubleFloatParamWithCloseEndpoint implements OnCloseAware {
+        private String[] savedParams = new String[2];
+        private OnCloseTestHelper helper;
+        
+        @Override
+        public void setHelper(OnCloseTestHelper helper) {
+            this.helper = helper;
+        }
+        
+        @OnOpen
+        public void onOpen(@PathParam("param1") Double p1, @PathParam("param2") Float p2) {
+            savedParams[0] = String.valueOf(p1);
+            savedParams[1] = String.valueOf(p2);
+        }
+        
+        @OnMessage
+        public String onMessage(@PathParam("param1") Double p1, @PathParam("param2") Float p2, String message) {
+            if ("MESSAGE".equals(message)) {
+                return String.valueOf(p1) + String.valueOf(p2);
+            } else if ("OPEN".equals(message)) {
+                return savedParams[0] + savedParams[1];
+            }
+            return "unknown";
+        }
+        
+        @OnClose
+        public void onClose(@PathParam("param1") Double p1, @PathParam("param2") Float p2) {
+            if (helper != null) {
+                helper.setClosedParam(String.valueOf(p1) + String.valueOf(p2));
+            }
         }
     }
 }

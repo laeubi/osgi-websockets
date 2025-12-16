@@ -166,14 +166,15 @@ The client module implements the `jakarta.websocket.WebSocketContainer` interfac
 ### Phase 3: Advanced Features (Priority: LOW)
 **Goal**: Implement missing features with corresponding tests
 
-8. **@PathParam Support** ✅ **COMPLETED** (12/25 tests from TCK)
-   - ✅ Implemented URI template parameter extraction
-   - ✅ Added tests for various parameter types (String, primitives, wrappers)
-   - ✅ Support for @PathParam in @OnOpen, @OnMessage, @OnError, @OnClose
-   - ✅ Support for primitive types and wrapper classes
+8. **@PathParam Support** ✅ **FULLY COMPLETED** (27/27 tests from TCK - 100%)
+   - ✅ Implemented URI template parameter extraction with URITemplate class
+   - ✅ Added comprehensive tests covering all parameter types and lifecycle methods
+   - ✅ Full support for @PathParam in @OnOpen, @OnMessage, @OnError (IOException and RuntimeException), @OnClose
+   - ✅ Support for String, primitive types (boolean, char), and wrapper classes (Double, Float, Long)
+   - ✅ Proper handling of non-matching parameter names (returns null as per specification)
    - **TCK Sources**: `com/sun/ts/tests/websocket/ee/jakarta/websocket/server/pathparam/`
    - **Test Location**: `compliance/src/test/java/org/osgi/impl/websockets/compliance/pathparam/PathParamComplianceTest.java`
-   - **Note**: 12 comprehensive tests cover the core @PathParam functionality; remaining TCK tests involve edge cases and multiple parameter combinations
+   - **Specification**: Jakarta WebSocket 2.2, Section 4.3 (URI Template Matching)
 
 9. **Async Remote Endpoint** (~40 tests)
    - Complete async send implementation
@@ -344,15 +345,15 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 7: Deployment Validation Tests - 0/12 (requires additional endpoint configurations)
 
 ### Phase 3: Advanced Features
-- [x] Task 8: @PathParam Support - 12/25 ✅ **CORE FEATURES COMPLETE**
-  - ✅ Single String path parameter: 3/3 tests (@OnMessage, @OnOpen, @OnError)
-  - ✅ Multiple String path parameters: 2/2 tests (@OnMessage, @OnOpen)
-  - ✅ Non-matching path parameter (returns null): 1/1 test
-  - ✅ Boolean and char primitive parameters: 2/2 tests (@OnMessage, @OnOpen)
-  - ✅ Double and Float wrapper parameters: 2/2 tests (@OnMessage, @OnOpen)
+- [x] Task 8: @PathParam Support - 27/27 ✅ **FULLY COMPLETE**
+  - ✅ Single String path parameter: 5/5 tests (@OnMessage, @OnOpen, @OnError with IOException, @OnError with RuntimeException, @OnClose)
+  - ✅ Multiple String path parameters: 5/5 tests (@OnMessage, @OnOpen, @OnError with IOException, @OnError with RuntimeException, @OnClose)
+  - ✅ Non-matching path parameter (returns null): 5/5 tests (@OnMessage, @OnOpen, @OnError with IOException, @OnError with RuntimeException, @OnClose)
+  - ✅ Boolean and char primitive parameters: 5/5 tests (@OnMessage, @OnOpen, @OnError with IOException, @OnError with RuntimeException, @OnClose)
+  - ✅ Double and Float wrapper parameters: 5/5 tests (@OnMessage, @OnOpen, @OnError with IOException, @OnError with RuntimeException, @OnClose)
   - ✅ Long wrapper parameter: 2/2 tests (@OnMessage, @OnOpen)
-  - ⏸️ Remaining tests: 13/25 deferred (additional type combinations, @OnClose with @PathParam, edge cases)
   - **Test Location**: `compliance/src/test/java/org/osgi/impl/websockets/compliance/pathparam/PathParamComplianceTest.java`
+  - **Note**: All TCK PathParam tests have been successfully migrated and adapted to our test structure
 - [ ] Task 9: Async Remote Endpoint - 0/40
 - [ ] Task 10: Session Management - 0/20 (requires implementation)
 
@@ -361,16 +362,16 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 128/280 tests (45.7%)**
+**Total Progress: 143/280 tests (51.1%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 134, Failures: 0, Errors: 0, Skipped: 1
+Tests run: 149, Failures: 0, Errors: 0, Skipped: 1
 ```
 
-All compliance tests passing! ✅ (Phase 3, Task 8 @PathParam support COMPLETED)
+All compliance tests passing! ✅ (Phase 3, Task 8 @PathParam support FULLY COMPLETED - 27/27 tests)
 
 ### Test Coverage Summary
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
@@ -403,12 +404,13 @@ All compliance tests passing! ✅ (Phase 3, Task 8 @PathParam support COMPLETED)
   - getContainer() (returns null for server-side sessions)
   - getOpenSessions() (returns empty set in current implementation)
   - getPathParameters() (now fully functional with @PathParam support)
-- **@PathParam Support**: 12 tests - URI template parameter extraction
-  - Single String parameter: 3 tests (@OnMessage, @OnOpen, @OnError)
-  - Multiple String parameters: 2 tests (@OnMessage, @OnOpen)
-  - Non-matching parameter name (null handling): 1 test
-  - Primitive types: 2 tests (boolean, char with @OnMessage, @OnOpen)
-  - Wrapper types: 4 tests (Double, Float, Long with @OnMessage, @OnOpen)
+- **@PathParam Support**: 27 tests - Complete URI template parameter extraction with all lifecycle methods
+  - Single String parameter: 5 tests (@OnMessage, @OnOpen, @OnError IOException, @OnError RuntimeException, @OnClose)
+  - Multiple String parameters: 5 tests (all lifecycle methods)
+  - Non-matching parameter name (null handling): 5 tests (all lifecycle methods)
+  - Boolean and char primitive types: 5 tests (all lifecycle methods)
+  - Double and Float wrapper types: 5 tests (all lifecycle methods)
+  - Long wrapper type: 2 tests (@OnMessage, @OnOpen)
 - **Negative Validation**: 18 tests - Invalid endpoint annotations and configurations
   - Duplicate annotation handlers (@OnMessage, @OnOpen, @OnClose, @OnError)
   - Invalid @OnMessage parameters (int, boolean position, PongMessage combinations)
