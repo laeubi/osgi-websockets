@@ -10,6 +10,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.util.AttributeKey;
 
+import jakarta.websocket.MessageHandler;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
 import jakarta.websocket.OnMessage;
@@ -20,6 +21,7 @@ import jakarta.websocket.server.ServerEndpointConfig;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -142,10 +144,13 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             // Get the session for this channel
             Session session = ctx.channel().attr(SESSION_KEY).get();
             
-            // Find and invoke @OnMessage method
-            String response = invokeOnMessage(endpointInstance, receivedText, session);
-            if (response != null) {
-                ctx.channel().writeAndFlush(new TextWebSocketFrame(response));
+            // Try programmatic message handlers first
+            if (!invokeProgrammaticTextHandlers(session, receivedText)) {
+                // No programmatic handler found, try annotation-based @OnMessage
+                String response = invokeOnMessage(endpointInstance, receivedText, session);
+                if (response != null) {
+                    ctx.channel().writeAndFlush(new TextWebSocketFrame(response));
+                }
             }
         } else if (frame instanceof BinaryWebSocketFrame) {
             BinaryWebSocketFrame binaryFrame = (BinaryWebSocketFrame) frame;
@@ -165,7 +170,12 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             // Convert ByteBuf to ByteBuffer
             java.nio.ByteBuffer receivedData = binaryFrame.content().nioBuffer();
             
-            // Find and invoke @OnMessage method for binary data
+            // Try programmatic message handlers first
+            if (invokeProgrammaticBinaryHandlers(session, receivedData)) {
+                return; // Handler processed the message
+            }
+            
+            // Fall back to annotation-based @OnMessage method for binary data
             invokeOnBinaryMessage(endpointInstance, receivedData, session);
         } else {
             String message = "Unsupported frame type: " + frame.getClass().getName();
@@ -353,6 +363,112 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
         }
         
         return codecs.decodeBinary(data, targetType);
+    }
+    
+    /**
+     * Invokes programmatic text message handlers registered via Session.addMessageHandler().
+     * 
+     * @return true if a handler was invoked, false if no matching handler found
+     */
+    @SuppressWarnings("unchecked")
+    private boolean invokeProgrammaticTextHandlers(Session session, String message) {
+        if (!(session instanceof NettyWebSocketSession)) {
+            return false;
+        }
+        
+        NettyWebSocketSession nettySession = (NettyWebSocketSession) session;
+        Set<MessageHandler> handlers = nettySession.getMessageHandlers();
+        
+        if (handlers.isEmpty()) {
+            return false;
+        }
+        
+        // Try Whole<String> handlers
+        for (MessageHandler handler : handlers) {
+            if (handler instanceof MessageHandler.Whole) {
+                try {
+                    // Cast to raw type and invoke - handler will throw ClassCastException if wrong type
+                    ((MessageHandler.Whole) handler).onMessage(message);
+                    return true; // Handler invoked successfully
+                } catch (ClassCastException e) {
+                    // This handler doesn't accept String, try next
+                    continue;
+                } catch (Exception e) {
+                    // Handler threw an exception - this is a real error
+                    System.err.println("Message handler threw exception: " + e.getMessage());
+                    e.printStackTrace();
+                    return true; // Consider it handled even if it threw
+                }
+            }
+        }
+        
+        // TODO: Support Partial<String> handlers for fragmented messages
+        
+        return false; // No suitable handler found
+    }
+    
+    /**
+     * Invokes programmatic binary message handlers registered via Session.addMessageHandler().
+     * 
+     * @return true if a handler was invoked, false if no matching handler found
+     */
+    @SuppressWarnings("unchecked")
+    private boolean invokeProgrammaticBinaryHandlers(Session session, java.nio.ByteBuffer data) {
+        if (!(session instanceof NettyWebSocketSession)) {
+            return false;
+        }
+        
+        NettyWebSocketSession nettySession = (NettyWebSocketSession) session;
+        Set<MessageHandler> handlers = nettySession.getMessageHandlers();
+        
+        if (handlers.isEmpty()) {
+            return false;
+        }
+        
+        // Try Whole<ByteBuffer> handlers first
+        for (MessageHandler handler : handlers) {
+            if (handler instanceof MessageHandler.Whole) {
+                try {
+                    // Duplicate the buffer so handler can read it without affecting position
+                    ((MessageHandler.Whole) handler).onMessage(data.duplicate());
+                    return true; // Handler invoked successfully
+                } catch (ClassCastException e) {
+                    // This handler doesn't accept ByteBuffer, try next type
+                    continue;
+                } catch (Exception e) {
+                    // Handler threw an exception - this is a real error
+                    System.err.println("Message handler threw exception: " + e.getMessage());
+                    e.printStackTrace();
+                    return true; // Consider it handled even if it threw
+                }
+            }
+        }
+        
+        // Try Whole<byte[]> handlers
+        for (MessageHandler handler : handlers) {
+            if (handler instanceof MessageHandler.Whole) {
+                try {
+                    // Convert ByteBuffer to byte[]
+                    java.nio.ByteBuffer duplicate = data.duplicate();
+                    byte[] bytes = new byte[duplicate.remaining()];
+                    duplicate.get(bytes);
+                    ((MessageHandler.Whole) handler).onMessage(bytes);
+                    return true; // Handler invoked successfully
+                } catch (ClassCastException e) {
+                    // This handler doesn't accept byte[], try next
+                    continue;
+                } catch (Exception e) {
+                    // Handler threw an exception - this is a real error
+                    System.err.println("Message handler threw exception: " + e.getMessage());
+                    e.printStackTrace();
+                    return true; // Consider it handled even if it threw
+                }
+            }
+        }
+        
+        // TODO: Support Partial handlers for fragmented messages
+        
+        return false; // No suitable handler found
     }
     
     /**
