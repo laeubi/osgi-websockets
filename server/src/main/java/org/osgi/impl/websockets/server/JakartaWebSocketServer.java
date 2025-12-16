@@ -47,6 +47,8 @@ public class JakartaWebSocketServer {
         final EndpointCodecs codecs;
         final URITemplate uriTemplate;
         private final Map<io.netty.channel.Channel, Object> activeChannels = new ConcurrentHashMap<>();
+        private final java.util.Set<jakarta.websocket.Session> openSessions = 
+            java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
         
         EndpointRegistration(Class<?> endpointClass, String effectivePath, EndpointHandler handler) {
             this.endpointClass = endpointClass;
@@ -79,6 +81,28 @@ public class JakartaWebSocketServer {
          */
         void unregisterChannel(io.netty.channel.Channel channel) {
             activeChannels.remove(channel);
+        }
+        
+        /**
+         * Registers an open session for this endpoint.
+         */
+        void registerSession(jakarta.websocket.Session session) {
+            openSessions.add(session);
+        }
+        
+        /**
+         * Unregisters a session from this endpoint.
+         */
+        void unregisterSession(jakarta.websocket.Session session) {
+            openSessions.remove(session);
+        }
+        
+        /**
+         * Returns a copy of all open sessions for this endpoint.
+         */
+        java.util.Set<jakarta.websocket.Session> getOpenSessions() {
+            // Return a new HashSet to avoid concurrent modification issues
+            return new java.util.HashSet<>(openSessions);
         }
         
         /**

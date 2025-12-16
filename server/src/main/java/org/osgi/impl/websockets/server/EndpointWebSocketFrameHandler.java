@@ -107,13 +107,17 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             // Set the endpoint codecs on the session
             session.setCodecs(registration.codecs);
             
+            // Set the endpoint registration on the session for open session tracking
+            session.setEndpointRegistration(registration);
+            
             try {
                 // Create endpoint instance using the handler
                 Object endpointInstance = registration.handler.createEndpointInstance(registration.endpointClass);
                 ctx.channel().attr(ENDPOINT_INSTANCE_KEY).set(endpointInstance);
                 
-                // Register this channel with the endpoint
+                // Register this channel and session with the endpoint
                 registration.registerChannel(ctx.channel(), endpointInstance);
+                registration.registerSession(session);
                 
                 // Invoke @OnOpen if present
                 invokeOnOpen(endpointInstance, session);
@@ -201,10 +205,15 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             // Invoke @OnClose if present
             invokeOnClose(endpointInstance, session);
             
-            // Notify the handler that the session has ended
+            // Unregister session and channel from endpoint
             JakartaWebSocketServer.EndpointRegistration registration = 
                 ctx.channel().attr(WebSocketPathHandler.ENDPOINT_REGISTRATION_KEY).get();
             if (registration != null) {
+                registration.unregisterChannel(ctx.channel());
+                if (session != null) {
+                    registration.unregisterSession(session);
+                }
+                
                 try {
                     registration.handler.sessionEnded(endpointInstance);
                 } catch (Exception e) {

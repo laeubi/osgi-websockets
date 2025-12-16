@@ -41,6 +41,7 @@ public class NettyWebSocketSession implements Session {
     private final BasicRemoteEndpointImpl basicRemote;
     private final AsyncRemoteEndpointImpl asyncRemote;
     private EndpointCodecs codecs; // Encoders and decoders for this session
+    private JakartaWebSocketServer.EndpointRegistration endpointRegistration; // For tracking open sessions
     
     private long maxIdleTimeout = 0;
     private int maxBinaryMessageBufferSize = 8192;
@@ -82,6 +83,13 @@ public class NettyWebSocketSession implements Session {
         return codecs;
     }
     
+    /**
+     * Sets the endpoint registration for this session (for tracking open sessions).
+     */
+    void setEndpointRegistration(JakartaWebSocketServer.EndpointRegistration registration) {
+        this.endpointRegistration = registration;
+    }
+    
     @Override
     public String getId() {
         return id;
@@ -100,6 +108,11 @@ public class NettyWebSocketSession implements Session {
     @Override
     public void close(CloseReason closeReason) throws IOException {
         if (channel.isActive()) {
+            // Unregister this session from the endpoint
+            if (endpointRegistration != null) {
+                endpointRegistration.unregisterSession(this);
+            }
+            
             channel.writeAndFlush(new CloseWebSocketFrame(
                 closeReason.getCloseCode().getCode(),
                 closeReason.getReasonPhrase()
@@ -232,7 +245,10 @@ public class NettyWebSocketSession implements Session {
     
     @Override
     public Set<Session> getOpenSessions() {
-        // Not tracking all sessions in this implementation
+        // Return all open sessions for this endpoint
+        if (endpointRegistration != null) {
+            return endpointRegistration.getOpenSessions();
+        }
         return Collections.emptySet();
     }
     
