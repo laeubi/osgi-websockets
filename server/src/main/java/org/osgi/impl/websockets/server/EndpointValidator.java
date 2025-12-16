@@ -222,6 +222,13 @@ public class EndpointValidator {
                 continue;
             }
             
+            // Check for @PathParam parameters FIRST before checking primitive types
+            // This ensures that @PathParam boolean/char/etc. are not mistaken for message parameters
+            if (method.getParameters()[i].isAnnotationPresent(PathParam.class)) {
+                pathParamCount++;
+                continue;
+            }
+            
             // Check for boolean parameter
             // Boolean has two uses:
             // 1. As a primitive message type (boolean alone or with Session)
@@ -255,12 +262,6 @@ public class EndpointValidator {
                     hasMessageParam = true;
                     continue;
                 }
-            }
-            
-            // Check for @PathParam parameters
-            if (method.getParameters()[i].isAnnotationPresent(PathParam.class)) {
-                pathParamCount++;
-                continue;
             }
             
             // Check for message parameter types

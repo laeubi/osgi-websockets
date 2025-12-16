@@ -293,7 +293,12 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                         }
                         return null;
                     }
-                } catch (IllegalAccessException | InvocationTargetException e) {
+                } catch (InvocationTargetException e) {
+                    // The endpoint method threw an exception - invoke @OnError
+                    Throwable cause = e.getCause() != null ? e.getCause() : e;
+                    invokeOnError(endpointInstance, cause, session);
+                    return null;
+                } catch (IllegalAccessException e) {
                     System.err.println("Failed to invoke @OnMessage: " + e.getMessage());
                     e.printStackTrace();
                 }
