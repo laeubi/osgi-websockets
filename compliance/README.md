@@ -306,7 +306,7 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
   - ✅ Text message handling: 8/8 tests (String, String+Session, Session+String, custom decoder, return values, void return, empty string, large message)
   - ✅ Binary message handling: 7/7 tests (ByteBuffer, byte[], ByteBuffer+Session, byte[]+Session, Session+ByteBuffer, large binary, empty binary)
   - ✅ Primitive type conversion: 25/25 tests (boolean, byte, char, short, int, long, float, double - each with 3 parameter combinations, plus wrapper type test)
-- [x] Task 3: Encoder/Decoder Tests - 16/30 ✅ **SIGNIFICANTLY COMPLETE**
+- [x] Task 3: Encoder/Decoder Tests - 21/30 ✅ **SIGNIFICANTLY COMPLETE**
   - ✅ Text encoder/decoder: 3/3 tests (simple object, willDecode, multiple decoders)
   - ✅ Binary encoder/decoder: 3/3 tests (simple object with custom type, willDecode, multiple decoders)
   - ✅ Lifecycle tests: 1/1 test (init/destroy for text encoder/decoder)
@@ -316,8 +316,13 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
     - BinaryStream encoder: Boolean, Integer, Long
     - BinaryStream decoder: custom object
     - Combined TextStream encoder/decoder: bidirectional
-  - ⏸️ Error handling: 0/5 (not implemented yet - requires encoder/decoder exception tests)
-  - ⏸️ Additional encoder/decoder tests: 0/8 (pending - advanced scenarios)
+  - ✅ Error handling: 5/5 tests **COMPLETE** (DecodeException and EncodeException propagation to @OnError) ⭐ **NEW**
+    - Text decoder throwing DecodeException
+    - Binary decoder throwing DecodeException
+    - Text encoder throwing EncodeException
+    - Binary encoder throwing EncodeException
+    - Text stream decoder throwing IOException
+  - ⏸️ Additional encoder/decoder tests: 0/9 (pending - advanced scenarios, multiple encoders, priority)
 - [x] Task 4: Session API Tests - 18/25 ✅ **COMPLETED (Core Features)**
   - ✅ Session lifecycle: 4/4 tests (isOpen, getId, close, close with reason)
   - ✅ Session configuration: 3/3 tests (maxIdleTimeout, maxBinaryBufferSize, maxTextBufferSize)
@@ -362,16 +367,16 @@ compliance/src/test/java/org/osgi/impl/websockets/compliance/
 - [ ] Task 13: Subprotocol Support (requires implementation)
 - [ ] Task 14: Extension Support (requires implementation)
 
-**Total Progress: 144/280 tests (51.4%)**
+**Total Progress: 149/280 tests (53.2%)**
 
 ## Test Results
 
 Current test run (compliance module):
 ```
-Tests run: 150, Failures: 0, Errors: 0, Skipped: 1
+Tests run: 155, Failures: 0, Errors: 0, Skipped: 1
 ```
 
-All compliance tests passing! ✅ (Phase 1 deferred @PathParam test completed, Phase 3 Task 8 fully complete)
+All compliance tests passing! ✅ (Phase 1 encoder/decoder error handling complete)
 
 ### Test Coverage Summary
 - **CloseReason API**: 6 tests - Basic close code and reason functionality
@@ -383,7 +388,7 @@ All compliance tests passing! ✅ (Phase 1 deferred @PathParam test completed, P
   - boolean, byte, char, short, int, long, float, double
   - Each primitive tested with 3 parameter combinations: (primitive), (primitive, Session), (Session, primitive)
   - Wrapper type validation (Integer)
-- **Encoder/Decoder**: 16 tests
+- **Encoder/Decoder**: 21 tests
   - Text encoder/decoder: 3 tests (simple object, willDecode, multiple decoders)
   - Binary encoder/decoder: 3 tests (custom object (Integer), willDecode, multiple decoders)
   - Lifecycle: 1 test (init/destroy for text encoder/decoder)
@@ -393,6 +398,10 @@ All compliance tests passing! ✅ (Phase 1 deferred @PathParam test completed, P
     - BinaryStream encoder: Boolean, Integer, Long types
     - BinaryStream decoder: custom object
     - Combined TextStream encoder/decoder: bidirectional message processing
+  - **Error handling**: 5 tests (DecodeException and EncodeException propagation to @OnError) ⭐ **NEW**
+    - Text/binary decoder exceptions caught and forwarded to @OnError
+    - Text/binary encoder exceptions wrapped in IOException
+    - Stream decoder IOException handling
 - **Session API**: 17 tests - Complete core session functionality
   - getId(), isOpen(), close(), close(CloseReason)
   - getRequestURI(), getProtocolVersion()

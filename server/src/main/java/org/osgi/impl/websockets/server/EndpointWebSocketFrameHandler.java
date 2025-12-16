@@ -264,12 +264,18 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                             hasMessageParam = true;
                         } else if (!hasMessageParam && paramTypes[i] != Session.class && !parameters[i].isAnnotationPresent(jakarta.websocket.server.PathParam.class)) {
                             // Custom type with decoder
-                            args[i] = tryDecodeTextMessage(message, paramTypes[i], session);
-                            if (args[i] == null) {
-                                validMethod = false;
-                                break;
+                            try {
+                                args[i] = decodeTextMessage(message, paramTypes[i], session);
+                                if (args[i] == null) {
+                                    validMethod = false;
+                                    break;
+                                }
+                                hasMessageParam = true;
+                            } catch (jakarta.websocket.DecodeException e) {
+                                // Decoder threw an exception - invoke @OnError
+                                invokeOnError(endpointInstance, e, session);
+                                return null;
                             }
-                            hasMessageParam = true;
                         } else if (paramTypes[i] == Session.class) {
                             args[i] = session;
                         } else if (parameters[i].isAnnotationPresent(jakarta.websocket.server.PathParam.class)) {
@@ -310,9 +316,12 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
 
     
     /**
-     * Tries to decode a text message to the target type using registered decoders.
+     * Decodes a text message to the target type using registered decoders.
+     * 
+     * @throws jakarta.websocket.DecodeException if decoding fails
      */
-    private Object tryDecodeTextMessage(String message, Class<?> targetType, Session session) {
+    private Object decodeTextMessage(String message, Class<?> targetType, Session session) 
+            throws jakarta.websocket.DecodeException {
         if (!(session instanceof NettyWebSocketSession)) {
             return null;
         }
@@ -323,18 +332,16 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             return null;
         }
         
-        try {
-            return codecs.decodeText(message, targetType);
-        } catch (Exception e) {
-            System.err.println("Failed to decode message: " + e.getMessage());
-            return null;
-        }
+        return codecs.decodeText(message, targetType);
     }
     
     /**
-     * Tries to decode a binary message to the target type using registered decoders.
+     * Decodes a binary message to the target type using registered decoders.
+     * 
+     * @throws jakarta.websocket.DecodeException if decoding fails
      */
-    private Object tryDecodeBinaryMessage(java.nio.ByteBuffer data, Class<?> targetType, Session session) {
+    private Object decodeBinaryMessage(java.nio.ByteBuffer data, Class<?> targetType, Session session) 
+            throws jakarta.websocket.DecodeException {
         if (!(session instanceof NettyWebSocketSession)) {
             return null;
         }
@@ -345,12 +352,7 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
             return null;
         }
         
-        try {
-            return codecs.decodeBinary(data, targetType);
-        } catch (Exception e) {
-            System.err.println("Failed to decode binary message: " + e.getMessage());
-            return null;
-        }
+        return codecs.decodeBinary(data, targetType);
     }
     
     /**
@@ -409,40 +411,62 @@ public class EndpointWebSocketFrameHandler extends SimpleChannelInboundHandler<W
                                paramTypes[0] != byte[].class) {
                         // Method signature with decoder: void onMessage(CustomType message)
                         // Try to decode the binary message using the endpoint's decoders
-                        Object decodedMessage = tryDecodeBinaryMessage(data, paramTypes[0], session);
-                        if (decodedMessage != null) {
-                            method.invoke(endpointInstance, decodedMessage);
+                        try {
+                            Object decodedMessage = decodeBinaryMessage(data, paramTypes[0], session);
+                            if (decodedMessage != null) {
+                                method.invoke(endpointInstance, decodedMessage);
+                                return;
+                            } else {
+                                // No decoder found, skip this method
+                                continue;
+                            }
+                        } catch (jakarta.websocket.DecodeException e) {
+                            // Decoder threw an exception - invoke @OnError
+                            invokeOnError(endpointInstance, e, session);
                             return;
-                        } else {
-                            // No decoder found, skip this method
-                            continue;
                         }
                     } else if (paramTypes.length == 2 && paramTypes[0] != java.nio.ByteBuffer.class && 
                                paramTypes[0] != byte[].class && paramTypes[0] != Session.class && 
                                paramTypes[1] == Session.class) {
                         // Method signature with decoder: void onMessage(CustomType message, Session session)
-                        Object decodedMessage = tryDecodeBinaryMessage(data, paramTypes[0], session);
-                        if (decodedMessage != null) {
-                            method.invoke(endpointInstance, decodedMessage, session);
+                        try {
+                            Object decodedMessage = decodeBinaryMessage(data, paramTypes[0], session);
+                            if (decodedMessage != null) {
+                                method.invoke(endpointInstance, decodedMessage, session);
+                                return;
+                            } else {
+                                // No decoder found, skip this method
+                                continue;
+                            }
+                        } catch (jakarta.websocket.DecodeException e) {
+                            // Decoder threw an exception - invoke @OnError
+                            invokeOnError(endpointInstance, e, session);
                             return;
-                        } else {
-                            // No decoder found, skip this method
-                            continue;
                         }
                     } else if (paramTypes.length == 2 && paramTypes[0] == Session.class && 
                                paramTypes[1] != java.nio.ByteBuffer.class && 
                                paramTypes[1] != byte[].class) {
                         // Method signature with decoder: void onMessage(Session session, CustomType message)
-                        Object decodedMessage = tryDecodeBinaryMessage(data, paramTypes[1], session);
-                        if (decodedMessage != null) {
-                            method.invoke(endpointInstance, session, decodedMessage);
+                        try {
+                            Object decodedMessage = decodeBinaryMessage(data, paramTypes[1], session);
+                            if (decodedMessage != null) {
+                                method.invoke(endpointInstance, session, decodedMessage);
+                                return;
+                            } else {
+                                // No decoder found, skip this method
+                                continue;
+                            }
+                        } catch (jakarta.websocket.DecodeException e) {
+                            // Decoder threw an exception - invoke @OnError
+                            invokeOnError(endpointInstance, e, session);
                             return;
-                        } else {
-                            // No decoder found, skip this method
-                            continue;
                         }
                     }
-                } catch (IllegalAccessException | InvocationTargetException e) {
+                } catch (InvocationTargetException e) {
+                    // The endpoint method threw an exception - invoke @OnError
+                    Throwable cause = e.getCause() != null ? e.getCause() : e;
+                    invokeOnError(endpointInstance, cause, session);
+                } catch (IllegalAccessException e) {
                     System.err.println("Failed to invoke @OnMessage for binary: " + e.getMessage());
                     e.printStackTrace();
                 }
